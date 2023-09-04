@@ -1,0 +1,30 @@
+location,drinks,weight,height,race,gender,risklvl
+New York,3,150,70,Asian,male,0.7433
+Los Angeles,0,130,65,White,female,0.0892
+Chicago,5,180,72,Hispanic,male,0.2671
+Houston,2,200,75,Black,male,0.8076
+Miami,1,140,62,Asian,female,0.9779
+San Francisco,6,165,68,White,male,0.2565
+Seattle,4,190,73,Hispanic,female,0.3089
+Atlanta,2,170,71,Black,male,0.4598
+Boston,3,155,67,Asian,female,0.7564
+Denver,1,175,69,White,female,0.9568
+Dallas,5,210,77,Hispanic,male,0.1289
+Phoenix,0,145,64,Black,female,0.6572
+Washington,2,160,66,Asian,male,0.5346
+San Diego,4,195,72,White,male,0.0567
+Philadelphia,3,175,70,Hispanic,male,0.6542
+Austin,1,140,64,Black,female,0.3287
+Portland,2,185,71,Asian,female,0.1289
+Las Vegas,6,220,78,White,male,0.2467
+Charlotte,0,135,63,Hispanic,female,0.3897
+Nashville,5,190,72,Black,male,0.9653
+Minneapolis,3,165,68,Asian,female,0.5932
+New Orleans,1,155,67,White,male,0.8765
+Cleveland,2,175,70,Hispanic,male,0.4890
+Kansas City,4,200,75,Black,male,0.6789
+Los Angeles,0,145,64,Asian,female,0.2134
+Los Angeles,2,170,71,White,male,0.7645
+Los Angeles,6,215,77,Hispanic,male,0.4503
+Detroit,3,155,67,Black,female,0.9765
+Tampa,1,140,62,Asian,female,0.3421
