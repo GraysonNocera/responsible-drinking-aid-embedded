@@ -1,2 +1,0 @@
-#define responsible_drinking_aid_embedded_VERSION_MAJOR 
-#define responsible_drinking_aid_embedded_VERSION_MINOR 

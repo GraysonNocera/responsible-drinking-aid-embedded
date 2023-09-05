@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.26.3)
 
 # Set some basic project attributes
 project (responsible-drinking-aid-embedded
@@ -6,7 +6,7 @@ project (responsible-drinking-aid-embedded
 	DESCRIPTION "A Hello World Project")
 
 # This project will output an executable file
-add_executable(${PROJECT_NAME} responsible-drinking-aid-embedded.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp)
 
 # Create a simple configuration header
 configure_file(config.h.in config.h)

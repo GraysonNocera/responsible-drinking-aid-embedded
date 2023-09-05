@@ -1,2 +1,2 @@
-#define responsible-drinking-aid-embedded_VERSION_MAJOR @responsible-drinking-aid-embedded_VERSION_MAJOR@
-#define responsible-drinking-aid-embedded_VERSION_MINOR @responsible-drinking-aid-embedded_VERSION_MINOR@
+#define responsible_drinking_aid_embedded_VERSION_MAJOR @responsible_drinking_aid_embedded_VERSION_MAJOR@
+#define responsible_drinking_aid_embedded_VERSION_MINOR @responsible_drinking_aid_embedded_VERSION_MINOR@
