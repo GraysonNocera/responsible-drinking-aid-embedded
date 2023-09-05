@@ -202,7 +202,9 @@ int main(void)
     Delay_OneSecond();
     USART5_SendString("AT+START");
 
+    while(1){
 
+    }
 
 
 
