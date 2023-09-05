@@ -203,7 +203,7 @@ int main(void)
     USART5_SendString("AT+START");
 
     while(1){
-
+//not sure need this even since everything is interrupts
     }
 
 
