@@ -1,0 +1,3 @@
+/home/brian/Documents/ECE477/responsible-drinking-aid-embedded/build/CMakeFiles/responsible-drinking-aid-embedded.dir
+/home/brian/Documents/ECE477/responsible-drinking-aid-embedded/build/CMakeFiles/edit_cache.dir
+/home/brian/Documents/ECE477/responsible-drinking-aid-embedded/build/CMakeFiles/rebuild_cache.dir

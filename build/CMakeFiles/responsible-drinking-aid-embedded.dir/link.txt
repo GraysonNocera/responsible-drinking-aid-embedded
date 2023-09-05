@@ -1,0 +1,1 @@
+/usr/bin/c++ "CMakeFiles/responsible-drinking-aid-embedded.dir/src/main.cpp.o" -o responsible-drinking-aid-embedded 
