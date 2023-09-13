@@ -137,6 +137,12 @@ void USART5_SendChar(char c) {
     USART5->TDR = c;
 }
 
+void USART5_SendByte(uint16_t b) {
+    // Send the upper byte
+    USART5_SendChar((char)(b >> 8)+48);
+    USART5_SendChar((char)(b & 0xFF)+48);
+}
+
 void USART5_SendString(const char* str) {
     while (*str) {
         USART5_SendChar(*str++);
@@ -217,7 +223,7 @@ void startHeartRate(){
 //     After the 10ms has elapsed, set the RSTN pin high.
     Delay_MiliSecond(10);
     GPIOB->BSRR|=(0x1<<9);
-
+    Delay_MiliSecond(50);
 //     After an additional 50ms has elapsed, the MAX32664 is in application mode.
     //https://github.com/sparkfun/SparkFun_Bio_Sensor_Hub_Library/blob/f91b5fa12f391f9889919a20c8709849fb4c79fb/src/SparkFun_Bio_Sensor_Hub_Library.cpp#L43
 
@@ -260,14 +266,14 @@ void I2C_in(void){
     I2C1->CR2 &=~(0x1<<11);//set slave address as 7 bit
     I2C1->CR2 |=0xAA<<0; //slave address of heart rate monitor 7 bit
     I2C1->CR2&=~(0xFF<<16);//clear NBYTES
-    I2C1->CR2|=(0x3<<16);//Set N Bytes to one byte
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
 
     I2C1->CR1 |= I2C_CR1_PE;
 }
 
 void I2C_Start(void) {
     // Generate a start condition
-    I2C1->CR2 &= ~I2C_CR2_RD_WRN; //clear read bit
+    //I2C1->CR2 &= ~I2C_CR2_RD_WRN; //clear read bit
     I2C1->CR2 |= I2C_CR2_START; //start transfer
     while (!(I2C1->ISR & I2C_ISR_TXE)); // Wait for TXE (transmit data register empty)
 }
@@ -291,6 +297,7 @@ uint8_t I2C_ReadByte(void) {
 
     // Wait for data to be received
     while (!(I2C1->ISR & I2C_ISR_RXNE));
+    Delay_MiliSecond(45);
 
     // Read data from the data register
     uint8_t data = I2C1->RXDR;
@@ -302,26 +309,160 @@ int I2Cstuff(void) {
     // Initialize the system clock and GPIO
 
     // Send a message over I2C
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
     I2C_Start();
+    I2C_SendByte(0x02); // Send the data byte (change to your actual data)
     I2C_SendByte(0x00); // Send the data byte (change to your actual data)
-    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
-    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    //I2C_SendByte(0x00); // Send the data byte (change to your actual data)
 
     I2C_Stop();
+    Delay_MiliSecond(2);
+
 
     // Read data from I2C
     I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+//    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+//    I2C1->CR2|=(0x1<<16);//Set N Bytes to one byte
     I2C_Start();
     uint8_t receivedData = I2C_ReadByte();
     receivedData = I2C_ReadByte();
-    receivedData = I2C_ReadByte();
+//    receivedData = I2C_ReadByte();
 
     I2C_Stop();
+    Delay_MiliSecond(2);
 
-    I2C_Start();
-    I2C_SendByte(receivedData);
-    I2C_Stop();
+//    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+//    I2C_Start();
+//    I2C_SendByte(receivedData);
+//    I2C_Stop();
 }
+
+void I2C_SetOutputMode(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x3<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x10); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x02); // Send the data byte (change to your actual data)
+    I2C_Stop();
+    Delay_MiliSecond(2);
+
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x1<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    I2C_Stop();
+
+}
+
+void I2C_setFifoThreshold(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x3<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x10); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x01); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x0F); // Send the data byte (change to your actual data)
+    I2C_Stop();
+    Delay_MiliSecond(3);
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x1<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    I2C_Stop();
+
+}
+
+void agcAlgoControl(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x3<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x52); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x01); // Send the data byte (change to your actual data)
+    I2C_Stop();
+    Delay_MiliSecond(50);
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x1<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    I2C_Stop();
+
+}
+
+void max30101Control(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x3<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x44); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x03); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x01); // Send the data byte (change to your actual data)
+    I2C_Stop();
+    Delay_MiliSecond(50);
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x1<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    I2C_Stop();
+
+}
+
+void maximFastAlgoControl(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x3<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x52); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x02); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x01); // Send the data byte (change to your actual data)
+    I2C_Stop();
+    Delay_MiliSecond(50);
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x1<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    I2C_Stop();
+
+}
+
+void readAlgoSamples(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x3<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x51); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x03); // Send the data byte (change to your actual data)
+    I2C_Stop();
+
+    Delay_MiliSecond(2);
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    receivedData = I2C_ReadByte();
+    I2C_Stop();
+
+}
+
 
 
 int initBlue(void){
@@ -384,30 +525,280 @@ int initBlue(void){
 
 }
 
+void setUpHeart(void){
+    startHeartRate();
+    Delay_MiliSecond(1000);
+    I2C_in();
+    I2Cstuff();
+    I2C_SetOutputMode();
+    I2C_setFifoThreshold();
+    agcAlgoControl();
+    max30101Control();
+    maximFastAlgoControl();
+    readAlgoSamples();
+    Delay_MiliSecond(1000);
+}
+
+
+
+
+void checkStatus(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    I2C_Stop();
+
+    Delay_MiliSecond(45);
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    receivedData = I2C_ReadByte();
+    I2C_Stop();
+}
+
+void numSamplesOutFifo(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x12); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    I2C_Stop();
+
+    Delay_MiliSecond(45);
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    receivedData = I2C_ReadByte();
+    I2C_Stop();
+
+}
+
+void readFillArray(uint8_t bpmArr[]){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x12); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x01); // Send the data byte (change to your actual data)
+    I2C_Stop();
+    Delay_MiliSecond(2);
+
+
+    int sizeRead=6;
+    //uint8_t bpmArr[sizeRead];
+
+    for(size_t i = 0; i < sizeRead; i++){
+        bpmArr[i] = 0;
+    }
+
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x6<<16);//Set N Bytes to one byte
+    I2C_Start();
+    for(size_t i = 0; i < sizeRead; i++){
+        bpmArr[i] = I2C_ReadByte();
+    }
+    I2C_Stop();
+}
+
+void readBpm(void){
+    uint8_t bpmRetArr[6];
+    while(1){
+        checkStatus();
+        numSamplesOutFifo();
+        readFillArray(bpmRetArr);
+        // Heart Rate formatting
+        uint16_t heartRate = (uint16_t)(bpmRetArr[0] << 8);
+        heartRate |= (bpmRetArr[1]);
+        heartRate /= 10;
+
+        // Confidence formatting
+        uint8_t confidence = bpmRetArr[2];
+
+        //Blood oxygen level formatting
+        uint16_t oxygen = (uint16_t)(bpmRetArr[3] << 8);
+        oxygen |= bpmRetArr[4];
+        oxygen /= 10;
+
+        //"Machine State" - has a finger been detected?
+        uint8_t status = bpmRetArr[5];
+
+        Delay_MiliSecond(250);
+    }
+}
+
+
+
+void initializeEthanol(uint8_t adcData[]){
+    I2C1->CR2 &=~0xFF<<0; //slave address of ethanol sensor
+    I2C1->CR2 |=0x9A<<0; //slave address of ethanol sensor
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x1<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    I2C_Stop();
+    Delay_MiliSecond(2);
+
+
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    adcData[0] = I2C_ReadByte();
+    adcData[1] = I2C_ReadByte();
+    I2C_Stop();
+
+
+}
+
+void readMode(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x02); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    I2C_Stop();
+
+    Delay_MiliSecond(45);
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    receivedData = I2C_ReadByte();
+    I2C_Stop();
+
+}
+
+
+uint16_t alcohol3_getADCdata(void){
+
+    uint8_t writeData;
+    uint8_t readData[ 2 ];
+    uint16_t ADC_value;
+
+    initializeEthanol(readData);
+
+    ADC_value = readData[ 0 ];
+    ADC_value <<= 8;
+    ADC_value |= readData[ 1 ];
+
+    ADC_value = ADC_value & 0x0FFF;
+
+    return ADC_value;
+}
+
+/* Etanol in CO data
+ *
+ * Table:  CO [ppm] | Equivalent C2H5OH
+            0       |    0
+           10       |    1
+           50       |    6
+          100       |    18
+          500       |    274
+ */
+static float ethanolInCo(uint16_t co)
+{
+    float etanol;
+
+    if (co == 0)
+    {
+        etanol = 0;
+    }
+    else if (co <= 10)
+    {
+        etanol = co / 10.0;
+    }
+    else if (co > 10 && co <= 50)
+    {
+        etanol = (float)(6 / 50.0) * co;
+    }
+    else if (co > 50 && co <= 100)
+    {
+        etanol = (0.18 * co);
+    }
+    else if (co > 100)
+    {
+        etanol = (float)(274 / 500.0) * co;
+    }
+    return etanol;
+}
+
+/* Convert ppm to mg/L
+ *
+ * Table:  mg/l | air ppm
+ *         1.82 | 1000
+ *         0.91 | 500
+ *         0.18 | 100
+ *         0.09 | 50
+ */
+static float ppmTomgl(uint16_t ppm)
+{
+    float mgL;
+
+    mgL = (1.82 * ppm) / 1000.0;
+    return mgL;
+}
+
+float getBAC(void){
+
+    float Alcohol_mgL;
+    uint16_t Ethanol_ppm;
+    uint16_t readData;
+
+    readData = alcohol3_getADCdata();
+    Ethanol_ppm = ethanolInCo(readData);
+    Alcohol_mgL = ppmTomgl(Ethanol_ppm);
+
+    return Alcohol_mgL*1000;
+}
 
 int main(void)
 {
+
+
+    //Initialize functions
+
     //set up GPIO for power to BT
 
     //set up usart to communicate with HM-19
     init_usart5();
     //Interrupt for when we receive usart data
-    enable_tty_interrupt();
+    //enable_tty_interrupt();
     //create clock for delay function
     Set_Clock();
     //push button interrupt to send drink data
     pa0Interupt();
-    startHeartRate();
-    I2C_in();
-    I2Cstuff();
+    setUpHeart();
+    readMode();
     initBlue();
+    //readBpm();
+    uint16_t pBAC=getBAC();
 
 
     while(1){
 //not sure need this even since everything is interrupts
+     pBAC=getBAC();
+     USART5_SendChar('P');
+     USART5_SendChar(':');
+     USART5_SendByte(pBAC);
+     USART5_SendChar('\n');
+     USART5_SendChar('\r');
+     Delay_MiliSecond(1000);
     }
-
-
-
 
 }
