@@ -14,6 +14,84 @@
 #include <stdio.h>
 #include <string.h>
 
+
+void setup_tim3(void) {
+    // TODO: Enable GPIO C
+    RCC->AHBENR|=RCC_AHBENR_GPIOCEN;
+
+    // TODO: Configure the PC6-9 to be the outputs of TIM3 Ch 1-4
+    // TODO: First we clear their MODER bits
+    // TODO: Then we set them to AF mode
+    // TODO: Set PC6-9 to use AF0 since this corresponds to the TIM3 Ch1-4
+    // AFR[0] -> AFRL
+    // AFR[1] -> AFRH
+
+    //GPIOC->AFR[0] =0; working but may be wrong
+    //GPIOC->AFR[1] =0;
+    GPIOC->AFR[0] &=~0xFF000000;
+    GPIOC->AFR[1] &=~0xFF;
+    GPIOC->AFR[0] &=~0xFF000000;
+    GPIOC->AFR[1] &=~0xFF;
+
+    GPIOC->MODER &= ~0xAA000;
+    GPIOC->MODER |= 0xAA000;
+
+    // TODO: Enable TIM3 with 1 Hz timer
+    RCC->APB1ENR|=0x2;
+
+    TIM3->PSC=479;  //not sure this right
+    TIM3->ARR=999;
+
+    // TODO: Set to PWM mode 1 for all channels
+    // Can use the following code to set a channel to PWM mode 1 (110)
+    // This line set Timer x's channel 1 to be PWM mode 1 (OC1M bits with 110)
+    // TIMx->CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1;
+    TIM3->CCMR1 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1;
+    TIM3->CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
+    TIM3->CCMR2 |= TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1;
+    TIM3->CCMR2 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1;
+
+
+    // TODO: Enable all 4 channel outputs in `TIM3_CCER` using `CC1E` bit
+    //TIM3->CCER|=0x1;
+    TIM3->CCER|=0x1111; //set all?
+
+    // TODO: Enable TIM3 counter
+    TIM3->CR1|=TIM_CR1_CEN;
+
+    // TODO: Set CCR values
+    TIM3->CCR1=800;
+    TIM3->CCR2=400;
+    TIM3->CCR3=200;
+    TIM3->CCR4=100;
+
+}
+
+void updatePWM(){
+    TIM3->CCR1=100;
+    TIM3->CCR2=100;
+    TIM3->CCR3=100;
+    TIM3->CCR4=100;
+}
+
+void enable_batLEDSports(void) {
+    RCC->AHBENR|=RCC_AHBENR_GPIOCEN;
+
+    GPIOC->MODER &= ~0x000FF000;
+
+    GPIOC->MODER|= 0x00055000; //set C pins 4-7 as outputs
+
+    GPIOC->OTYPER&= ~0x03C0;
+    GPIOC->OTYPER|= 0x03C0; //set C pins 4-7 as open drain
+
+
+//    GPIOC->MODER &=0xFFFFFF00; //set C pins 0-3 as inputs
+    //GPIOC->MODER &=0xFFFF0000; //set C pins 0-3 as inputs
+
+//    GPIOC->PUPDR |=0x00000055;//set C pins 0-3 to pull-up resistors
+
+}
+
 void init_usart5() {
     // TODO
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN; //enable GPIOC
@@ -184,15 +262,20 @@ void EXTI0_1_IRQHandler(void) {
         USART5_SendString("Drink Consumed");
         Delay_OneSecond();
 
-        USART5_SendString("AT+RADD?");
-        Delay_OneSecond();
-        USART5_SendString("AT+CONNL");
+//        USART5_SendString("AT+RADD?");
+//        Delay_OneSecond();
+//        USART5_SendString("AT+CONNL");
+//        Delay_OneSecond();
+
+        readBpm();
         Delay_OneSecond();
 
+        readBAC();
 
         // Clear the EXTI0 (PA0) pending interrupt
         EXTI->PR |= EXTI_PR_PR0;
     }
+    updatePWM();
 }
 
 void startHeartRate(){
@@ -268,13 +351,38 @@ void I2C_in(void){
     I2C1->CR2&=~(0xFF<<16);//clear NBYTES
     I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
 
+    I2C1->CR1 |= I2C_CR1_ERRIE | I2C_CR1_NACKIE;//enable interupt on error
     I2C1->CR1 |= I2C_CR1_PE;
+    NVIC->ISER[0]|=(0x1<<(I2C1_IRQn));
+
+}
+
+
+void I2C1_IRQHandler(void) {
+    // Check error flags
+    USART5_SendString("Nack Failure\n");
+    if (I2C1->ISR & I2C_ISR_NACKF) {
+        USART5_SendString("Nack Failure\n");
+        // Acknowledge failure
+        // Handle the NACK (Not Acknowledged) error
+    }
+    if (I2C1->ISR & I2C_ISR_BERR) {
+        // Bus error
+        // Handle the bus error
+    }
+    // Add handling for other error flags as needed
+
+    // Clear the error flags
+    I2C1->ISR &= ~I2C_ISR_NACKF;
+    I2C1->ISR &= ~I2C_ISR_BERR;
+    // Clear other error flags as needed
 }
 
 void I2C_Start(void) {
     // Generate a start condition
     //I2C1->CR2 &= ~I2C_CR2_RD_WRN; //clear read bit
     I2C1->CR2 |= I2C_CR2_START; //start transfer
+
     while (!(I2C1->ISR & I2C_ISR_TXE)); // Wait for TXE (transmit data register empty)
 }
 
@@ -305,7 +413,7 @@ uint8_t I2C_ReadByte(void) {
     return data;
 }
 
-int I2Cstuff(void) {
+void I2Cstuff(void) {
     // Initialize the system clock and GPIO
 
     // Send a message over I2C
@@ -613,7 +721,7 @@ void readFillArray(uint8_t bpmArr[]){
 
 void readBpm(void){
     uint8_t bpmRetArr[6];
-    while(1){
+    //while(1){
         checkStatus();
         numSamplesOutFifo();
         readFillArray(bpmRetArr);
@@ -632,9 +740,15 @@ void readBpm(void){
 
         //"Machine State" - has a finger been detected?
         uint8_t status = bpmRetArr[5];
+        USART5_SendString("Heart Rate: ");
+        char ascii_string[20]; // Create a buffer to store the ASCII representation
+        // Use sprintf to convert the integer to ASCII
+        sprintf(ascii_string, "%d", heartRate);
+        USART5_SendString(ascii_string);
+
 
         Delay_MiliSecond(250);
-    }
+   // }
 }
 
 
@@ -648,7 +762,7 @@ void initializeEthanol(uint8_t adcData[]){
     I2C_Start();
     I2C_SendByte(0x00); // Send the data byte (change to your actual data)
     I2C_Stop();
-    Delay_MiliSecond(2);
+    Delay_MiliSecond(5);
 
 
     I2C1->CR2 |= (I2C_CR2_RD_WRN);
@@ -767,6 +881,20 @@ float getBAC(void){
     return Alcohol_mgL*1000;
 }
 
+void readBAC(){
+
+    uint16_t pBAC=getBAC();
+
+    char ascii_string[20]; // Create a buffer to store the ASCII representation
+    // Use sprintf to convert the integer to ASCII
+    sprintf(ascii_string, "%d", pBAC);
+    USART5_SendString("BAC: ");
+    USART5_SendString(ascii_string);
+//    USART5_SendChar('\n');
+//    USART5_SendChar('\r');
+    Delay_MiliSecond(1000);
+}
+
 int main(void)
 {
 
@@ -776,29 +904,38 @@ int main(void)
     //set up GPIO for power to BT
 
     //set up usart to communicate with HM-19
-    init_usart5();
-    //Interrupt for when we receive usart data
-    //enable_tty_interrupt();
-    //create clock for delay function
     Set_Clock();
-    //push button interrupt to send drink data
+    init_usart5();
+    I2C_in();
     pa0Interupt();
-    setUpHeart();
-    readMode();
+
+    //enable_tty_interrupt();
+    //setUpHeart();
+//    readMode();
+    //setup_tim3();
     initBlue();
-    //readBpm();
-    uint16_t pBAC=getBAC();
+//
+//    readBpm();
+//    uint16_t pBAC=getBAC();
 
 
     while(1){
+
+
+
+
+        //readBpm();
+        readBAC();
 //not sure need this even since everything is interrupts
-     pBAC=getBAC();
-     USART5_SendChar('P');
-     USART5_SendChar(':');
-     USART5_SendByte(pBAC);
-     USART5_SendChar('\n');
-     USART5_SendChar('\r');
-     Delay_MiliSecond(1000);
+//     pBAC=getBAC();
+//
+//     char ascii_string[20]; // Create a buffer to store the ASCII representation
+//     // Use sprintf to convert the integer to ASCII
+//     sprintf(ascii_string, "%d", pBAC);
+//     USART5_SendString(ascii_string);
+//     USART5_SendChar('\n');
+//     USART5_SendChar('\r');
+//     Delay_MiliSecond(1000);
     }
 
 }
