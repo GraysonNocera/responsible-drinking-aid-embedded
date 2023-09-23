@@ -260,18 +260,12 @@ void EXTI0_1_IRQHandler(void) {
     if ((EXTI->PR & EXTI_PR_PR0) != 0) {
         //USART5_SendString("btton");
         USART5_SendString("Drink Consumed");
-        Delay_OneSecond();
+        //Delay_OneSecond();
 
 //        USART5_SendString("AT+RADD?");
 //        Delay_OneSecond();
 //        USART5_SendString("AT+CONNL");
 //        Delay_OneSecond();
-
-        readBpm();
-        Delay_OneSecond();
-
-        readBAC();
-
         // Clear the EXTI0 (PA0) pending interrupt
         EXTI->PR |= EXTI_PR_PR0;
     }
@@ -630,6 +624,48 @@ int initBlue(void){
     USART5_SendString("AT+SAVE?");
     Delay_OneSecond();
 
+}
+
+void setup_adc(void) {
+    //PB3 input 11
+
+    RCC->AHBENR|=RCC_AHBENR_GPIOBEN;
+    GPIOB->MODER&=~0x3<<6;
+    GPIOB->MODER|=0x3<<6; //set PB3 to Analog
+
+    RCC->APB2ENR|=RCC_APB2ENR_ADC1EN; //enable adc
+    RCC->CR2&=~RCC_CR2_HSI14ON;
+    RCC->CR2|=RCC_CR2_HSI14ON; //set high speed internal clock
+
+    while(!(RCC->CR2 & RCC_CR2_HSI14RDY)); //waiting
+
+    ADC1->CR&=~ADC_CR_ADEN; //
+    ADC1->CR|=ADC_CR_ADEN;//enable adc
+    while(!(ADC1->ISR & ADC_ISR_ADRDY));
+
+    while(ADC1->CR & ADC_CR_ADSTART); //may or may not need
+
+    //Must wait again
+    ADC1->CHSELR&=~ADC_CHSELR_CHSEL9; //set IN3 in CHSELR
+    ADC1->CHSELR|=ADC_CHSELR_CHSEL9; //set IN3 in CHSELR
+    while(!(ADC1->ISR & ADC_ISR_ADRDY));
+
+    //Must wait
+}
+
+void readADC(){
+
+    ADC1->CR&=~ADC_CR_ADSTART; //start adc
+    ADC1->CR|=ADC_CR_ADSTART; //
+    while(!(ADC1->ISR & ADC_ISR_EOC)); //wait for EOC
+
+    int batVal = ADC1->DR*100/4095;
+
+    char ascii_string[20]; // Create a buffer to store the ASCII representation
+    // Use sprintf to convert the integer to ASCII
+    sprintf(ascii_string, "%d", batVal);
+    USART5_SendString("Bat: ");
+    USART5_SendString(ascii_string);
 
 }
 
@@ -898,7 +934,6 @@ void readBAC(){
 int main(void)
 {
 
-
     //Initialize functions
 
     //set up GPIO for power to BT
@@ -910,10 +945,12 @@ int main(void)
     pa0Interupt();
 
     //enable_tty_interrupt();
-    //setUpHeart();
-//    readMode();
-    //setup_tim3();
-    initBlue();
+    setUpHeart();
+    readMode();
+    setup_tim3();
+    //initBlue();
+    setup_adc();
+
 //
 //    readBpm();
 //    uint16_t pBAC=getBAC();
@@ -922,10 +959,9 @@ int main(void)
     while(1){
 
 
-
-
-        //readBpm();
+        readBpm();
         readBAC();
+        readADC();
 //not sure need this even since everything is interrupts
 //     pBAC=getBAC();
 //
