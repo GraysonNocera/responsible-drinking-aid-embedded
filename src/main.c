@@ -363,12 +363,22 @@ void I2C1_IRQHandler(void) {
     if (I2C1->ISR & I2C_ISR_BERR) {
         // Bus error
         // Handle the bus error
+        USART5_SendString("Bus Error\n");
+
+    }
+    if (I2C1->ISR & I2C_ISR_ARLO) {
+        // Bus error
+        // Handle the bus error
+        USART5_SendString("Arbitration Lost Error\n");
+
     }
     // Add handling for other error flags as needed
-
+    I2C_Stop();
     // Clear the error flags
     I2C1->ISR &= ~I2C_ISR_NACKF;
     I2C1->ISR &= ~I2C_ISR_BERR;
+    I2C1->ISR &= ~I2C_ISR_ARLO;
+
     // Clear other error flags as needed
 }
 
@@ -376,20 +386,23 @@ void I2C_Start(void) {
     // Generate a start condition
     //I2C1->CR2 &= ~I2C_CR2_RD_WRN; //clear read bit
     I2C1->CR2 |= I2C_CR2_START; //start transfer
-
-    while (!(I2C1->ISR & I2C_ISR_TXE)); // Wait for TXE (transmit data register empty)
+    int count=0;
+    while (!(I2C1->ISR & I2C_ISR_TXE)){};
+    //while (!(I2C1->ISR & I2C_ISR_TXE) && (count<=4)){Delay_MiliSecond(4); count++;}; // Wait for TXE (transmit data register empty)
 }
 
 void I2C_Stop(void) {
     // Generate a stop condition
     I2C1->CR2 |= I2C_CR2_STOP;
-    while (I2C1->CR2 & I2C_CR2_STOP); // Wait until stop condition is cleared
+    int count=0;
+    while ((I2C1->CR2 & I2C_CR2_STOP)){};// && (count<=4)){Delay_MiliSecond(4); count++;}; // Wait until stop condition is cleared
 }
 
 void I2C_SendByte(uint8_t data) {
     // Write data to the data register
     I2C1->TXDR = data;
-    while (!(I2C1->ISR & I2C_ISR_TXE)); // Wait for TXE
+    int count=0;
+    while (!(I2C1->ISR & I2C_ISR_TXE)){};//&&(count<=4)){Delay_MiliSecond(4); count++;}; // Wait for TXE
 }
 
 uint8_t I2C_ReadByte(void) {
@@ -398,7 +411,8 @@ uint8_t I2C_ReadByte(void) {
     //I2C1->CR2 |= (I2C_CR2_RD_WRN);
 
     // Wait for data to be received
-    while (!(I2C1->ISR & I2C_ISR_RXNE));
+    int count=0;
+    while (!(I2C1->ISR & I2C_ISR_RXNE)){};//&&(count<=4)){Delay_MiliSecond(4); count++;};
     Delay_MiliSecond(45);
 
     // Read data from the data register
@@ -768,12 +782,10 @@ void readBpm(void){
 
         // Confidence formatting
         uint8_t confidence = bpmRetArr[2];
-
         //Blood oxygen level formatting
         uint16_t oxygen = (uint16_t)(bpmRetArr[3] << 8);
         oxygen |= bpmRetArr[4];
         oxygen /= 10;
-
         //"Machine State" - has a finger been detected?
         uint8_t status = bpmRetArr[5];
         USART5_SendString("Heart Rate: ");
@@ -781,8 +793,6 @@ void readBpm(void){
         // Use sprintf to convert the integer to ASCII
         sprintf(ascii_string, "%d", heartRate);
         USART5_SendString(ascii_string);
-
-
         Delay_MiliSecond(250);
    // }
 }
@@ -809,8 +819,6 @@ void initializeEthanol(uint8_t adcData[]){
     adcData[0] = I2C_ReadByte();
     adcData[1] = I2C_ReadByte();
     I2C_Stop();
-
-
 }
 
 void readMode(void){
@@ -931,6 +939,39 @@ void readBAC(){
     Delay_MiliSecond(1000);
 }
 
+void setMFIOInt(void){
+    //set PB9 to interupt
+    RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+
+    GPIOB->MODER &= ~GPIO_MODER_MODER9;  // Clear the MODER bits for PA0
+    // No need to set anything; it's already in input mode by default
+    GPIOB->PUPDR&= ~(0x3<<18);
+
+    // Enable the SYSCFG peripheral clock
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
+
+    // Connect EXTI9 line to PB9 pin
+    SYSCFG->EXTICR[2] &= ~(SYSCFG_EXTICR3_EXTI9);
+
+    //Configure PB9 to trigger an interrupt on the falling edge (button press)
+   // EXTI->FTSR |= EXTI_FTSR_TR0; // Trigger on falling edge
+    EXTI->RTSR|=EXTI_RTSR_TR9;
+    EXTI->FTSR &= ~(EXTI_FTSR_TR9);       // Trigger on falling edge (HIGH to LOW)
+   // EXTI->RTSR &= ~(EXTI_RTSR_TR9);    // Disable rising edge trigger
+    EXTI->IMR |= EXTI_IMR_MR9;   // Enable EXTI9 (PB9)
+
+
+    // Enable EXTI0 interrupt in NVIC
+    NVIC->ISER[0]|=(0x1<<(EXTI4_15_IRQn));
+}
+
+void EXTI4_15_IRQHandler(void){
+
+    USART5_SendString("Heart Touch\n");
+    Delay_MiliSecond(1000);
+
+}
+
 int main(void)
 {
 
@@ -950,7 +991,7 @@ int main(void)
     setup_tim3();
     //initBlue();
     setup_adc();
-
+    setMFIOInt();
 //
 //    readBpm();
 //    uint16_t pBAC=getBAC();
@@ -959,9 +1000,9 @@ int main(void)
     while(1){
 
 
-        readBpm();
-        readBAC();
-        readADC();
+//        readBpm();
+//        readBAC();
+//        readADC();
 //not sure need this even since everything is interrupts
 //     pBAC=getBAC();
 //
