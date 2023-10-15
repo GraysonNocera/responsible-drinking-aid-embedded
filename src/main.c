@@ -270,6 +270,24 @@ void EXTI0_1_IRQHandler(void) {
         EXTI->PR |= EXTI_PR_PR0;
     }
     updatePWM();
+    GPIOA->MODER&= ~(0x3<<8);
+    GPIOA->MODER |= (0x1<<8);  // Clear the MODER bits for PA0
+    GPIOA->PUPDR&= ~(0x3<<8);
+    GPIOA->PUPDR|= (0x1<<9);
+    if(GPIOA->ODR& ~(0xFFF7)){
+       // GPIOA->BSRR|=(0x1<<20);
+        GPIOA->BSRR|=(0x1<<19);}
+    else{
+       // GPIOA->BSRR|=(0x1<<4);
+        GPIOA->BSRR|=(0x1<<3);;
+    }
+//    GPIOA->BSRR|=(0x1<<4);
+//    GPIOA->BSRR|=(0x1<<20);
+//    GPIOA->BSRR|=(0x1<<4);
+
+
+
+
 }
 
 void startHeartRate(){
@@ -328,9 +346,15 @@ void I2C_in(void){
     RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
 
     // Configure GPIO pins for I2C SCL and SDA
-    RCC->AHBENR |= RCC_AHBENR_GPIOAEN; // Enable GPIOA clock
-    GPIOA->MODER |= (GPIO_MODER_MODER9_1 | GPIO_MODER_MODER10_1); // Alternate function mode
-    GPIOA->AFR[1] |= (0x1 << 6) | (0x1 << 10); // Select AF1 (I2C) for PA9 and PA10
+//    RCC->AHBENR |= RCC_AHBENR_GPIOAEN; // Enable GPIOA clock
+//    GPIOA->MODER |= (GPIO_MODER_MODER9_1 | GPIO_MODER_MODER10_1); // Alternate function mode
+//    GPIOA->AFR[1] |= (0x1 << 6) | (0x1 << 10); // Select AF4 (I2C) for PA9 and PA10
+
+    // Enable the I2C peripheral clock PB6-SCL  PB7-SDA
+    // Configure GPIO pins for I2C SCL and SDA
+    RCC->AHBENR |= RCC_AHBENR_GPIOBEN; // Enable GPIOA clock
+    GPIOB->MODER |= (GPIO_MODER_MODER6_1 | GPIO_MODER_MODER7_1); // Alternate function mode
+    GPIOB->AFR[0] |= (0x1 << 24) | (0x1 << 28); // Select AF1 (I2C) for PB6 and PB7
 
     // Configure the I2C peripheral
     I2C1->CR1 &= ~I2C_CR1_PE; // Disable I2C1 while configuring
@@ -373,11 +397,15 @@ void I2C1_IRQHandler(void) {
 
     }
     // Add handling for other error flags as needed
-    I2C_Stop();
+    //I2C_Stop();
     // Clear the error flags
     I2C1->ISR &= ~I2C_ISR_NACKF;
     I2C1->ISR &= ~I2C_ISR_BERR;
     I2C1->ISR &= ~I2C_ISR_ARLO;
+    I2C1->ICR |= (0x1<<4);//~I2C_ISR_NACKF;
+    I2C1->ICR |= (0x1<<8);//~I2C_ISR_BERR;
+    I2C1->ICR |= (0x1<<3);//~I2C_ISR_ARLO;
+    I2C1->ICR |= (0x1<<5);//~I2C_ISR_BERR;
 
     // Clear other error flags as needed
 }
@@ -388,7 +416,7 @@ void I2C_Start(void) {
     I2C1->CR2 |= I2C_CR2_START; //start transfer
     int count=0;
     while (!(I2C1->ISR & I2C_ISR_TXE)){};
-    //while (!(I2C1->ISR & I2C_ISR_TXE) && (count<=4)){Delay_MiliSecond(4); count++;}; // Wait for TXE (transmit data register empty)
+    //while (!(I2C1->ISR & I2C_ISR_TXE) && (count<=4)){Delay_MiliSecond(40); count++;}; // Wait for TXE (transmit data register empty)
 }
 
 void I2C_Stop(void) {
@@ -396,6 +424,8 @@ void I2C_Stop(void) {
     I2C1->CR2 |= I2C_CR2_STOP;
     int count=0;
     while ((I2C1->CR2 & I2C_CR2_STOP)){};// && (count<=4)){Delay_MiliSecond(4); count++;}; // Wait until stop condition is cleared
+    //while ((I2C1->CR2 & I2C_CR2_STOP) && (count<=4)){Delay_MiliSecond(40); count++;}; // Wait for TXE (transmit data register empty)
+
 }
 
 void I2C_SendByte(uint8_t data) {
@@ -403,6 +433,7 @@ void I2C_SendByte(uint8_t data) {
     I2C1->TXDR = data;
     int count=0;
     while (!(I2C1->ISR & I2C_ISR_TXE)){};//&&(count<=4)){Delay_MiliSecond(4); count++;}; // Wait for TXE
+    //while (!(I2C1->ISR & I2C_ISR_TXE) && (count<=4)){Delay_MiliSecond(40); count++;}; // Wait for TXE (transmit data register empty)
 }
 
 uint8_t I2C_ReadByte(void) {
@@ -413,6 +444,8 @@ uint8_t I2C_ReadByte(void) {
     // Wait for data to be received
     int count=0;
     while (!(I2C1->ISR & I2C_ISR_RXNE)){};//&&(count<=4)){Delay_MiliSecond(4); count++;};
+    //while (!(I2C1->ISR & I2C_ISR_RXNE) && (count<=4)){Delay_MiliSecond(40); count++;}; // Wait for TXE (transmit data register empty)
+
     Delay_MiliSecond(45);
 
     // Read data from the data register
@@ -557,6 +590,27 @@ void maximFastAlgoControl(void){
 
 }
 
+void algoSampleAvg(void){
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x4<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x50); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x00); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x03); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x10); // Send the data byte (change to your actual data)
+    I2C_Stop();
+    Delay_MiliSecond(50);
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x1<<16);//Set N Bytes to one byte
+    I2C_Start();
+    uint8_t receivedData = I2C_ReadByte();
+    I2C_Stop();
+
+}
+
 void readAlgoSamples(void){
     I2C1->CR2 &= ~I2C_CR2_RD_WRN;
     I2C1->CR2&=~(0xFF<<16);//clear NBYTES
@@ -579,6 +633,45 @@ void readAlgoSamples(void){
 
 }
 
+void readSensorLEDs(void){
+    uint8_t senArr[12];
+    I2C1->CR2 &= ~I2C_CR2_RD_WRN;
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(0x2<<16);//Set N Bytes to one byte
+    I2C_Start();
+    I2C_SendByte(0x12); // Send the data byte (change to your actual data)
+    I2C_SendByte(0x01); // Send the data byte (change to your actual data)
+    I2C_Stop();
+    Delay_MiliSecond(2);
+
+
+    int sizeRead=12;
+    //uint8_t bpmArr[sizeRead];
+
+    for(size_t i = 0; i < sizeRead; i++){
+        senArr[i] = 0;
+    }
+
+    I2C1->CR2 |= (I2C_CR2_RD_WRN);
+    I2C1->CR2&=~(0xFF<<16);//clear NBYTES
+    I2C1->CR2|=(sizeRead<<16);//Set N Bytes to one byte
+    I2C_Start();
+    for(size_t i = 0; i < sizeRead; i++){
+        senArr[i] = I2C_ReadByte();
+    }
+    I2C_Stop();
+    uint32_t irLed;
+    uint32_t redLed;
+    irLed = (uint32_t)senArr[0] << 16;
+    irLed |= (uint32_t)senArr[1] << 8;
+    irLed |= senArr[2];
+
+    // Value of LED two...
+    redLed = (uint32_t)senArr[3] << 16;
+    redLed |= (uint32_t)senArr[4] << 8;
+    redLed |= senArr[5];
+}
+
 
 
 int initBlue(void){
@@ -589,7 +682,7 @@ int initBlue(void){
     Delay_OneSecond();
     Delay_OneSecond();
     //get device name
-    USART5_SendString("AT+NAME?");
+   // USART5_SendString("AT+RESET");
     Delay_OneSecond();
     //get device address
     USART5_SendString("AT+ADDR?");
@@ -641,11 +734,11 @@ int initBlue(void){
 }
 
 void setup_adc(void) {
-    //PB3 input 11
+    //PB0 input 8
 
     RCC->AHBENR|=RCC_AHBENR_GPIOBEN;
-    GPIOB->MODER&=~0x3<<6;
-    GPIOB->MODER|=0x3<<6; //set PB3 to Analog
+    GPIOB->MODER&=~0x3;
+    GPIOB->MODER|=0x3<<6; //set PB0 to Analog
 
     RCC->APB2ENR|=RCC_APB2ENR_ADC1EN; //enable adc
     RCC->CR2&=~RCC_CR2_HSI14ON;
@@ -660,11 +753,68 @@ void setup_adc(void) {
     while(ADC1->CR & ADC_CR_ADSTART); //may or may not need
 
     //Must wait again
-    ADC1->CHSELR&=~ADC_CHSELR_CHSEL9; //set IN3 in CHSELR
-    ADC1->CHSELR|=ADC_CHSELR_CHSEL9; //set IN3 in CHSELR
+    ADC1->CHSELR&=~ADC_CHSELR_CHSEL8; //set IN8 in CHSELR
+    ADC1->CHSELR|=ADC_CHSELR_CHSEL8; //set IN8 in CHSELR
     while(!(ADC1->ISR & ADC_ISR_ADRDY));
 
     //Must wait
+}
+
+
+
+void changeBatLeds(int batLevel){
+    if(batLevel==1){
+        TIM3->CCR1=100;
+        TIM3->CCR2=0;
+        TIM3->CCR3=0;
+        TIM3->CCR4=0;
+    }
+    else if(batLevel==2){
+        TIM3->CCR1=100;
+        TIM3->CCR2=100;
+        TIM3->CCR3=0;
+        TIM3->CCR4=0;
+    }
+    else if(batLevel==3){
+        TIM3->CCR1=100;
+        TIM3->CCR2=100;
+        TIM3->CCR3=100;
+        TIM3->CCR4=0;
+    }
+    else{
+        TIM3->CCR1=100;
+        TIM3->CCR2=100;
+        TIM3->CCR3=100;
+        TIM3->CCR4=100;
+    }
+
+}
+
+//Voltage (V)  |  State of Charge (SOC)
+//-----------------------------------
+//4.20         |  100%
+//4.00         |  75%
+//3.80         |  50%
+//3.60         |  25%
+//3.40         |  10%
+//3.20         |   0%
+
+int batteryPercLookup(uint16_t batVal){
+    int percRange;
+
+    if(batVal>=0 && batVal<25){
+        percRange=1;
+    }
+    else if(batVal>=25 && batVal<50){
+        percRange=2;
+    }
+    else if(batVal>=50 && batVal<75){
+        percRange=3;
+    }
+    else{
+        percRange=4;
+    }
+    return percRange;
 }
 
 void readADC(){
@@ -673,13 +823,15 @@ void readADC(){
     ADC1->CR|=ADC_CR_ADSTART; //
     while(!(ADC1->ISR & ADC_ISR_EOC)); //wait for EOC
 
-    int batVal = ADC1->DR*100/4095;
+    uint16_t batVal = ADC1->DR*100/4095;
 
+    int percRange=batteryPercLookup(batVal);
     char ascii_string[20]; // Create a buffer to store the ASCII representation
     // Use sprintf to convert the integer to ASCII
-    sprintf(ascii_string, "%d", batVal);
+    sprintf(ascii_string, "%d", percRange);
     USART5_SendString("Bat: ");
     USART5_SendString(ascii_string);
+    changeBatLeds(percRange);
 
 }
 
@@ -693,7 +845,9 @@ void setUpHeart(void){
     agcAlgoControl();
     max30101Control();
     maximFastAlgoControl();
+    algoSampleAvg();
     readAlgoSamples();
+    readSensorLEDs();
     Delay_MiliSecond(1000);
 }
 
@@ -763,7 +917,11 @@ void readFillArray(uint8_t bpmArr[]){
     I2C1->CR2&=~(0xFF<<16);//clear NBYTES
     I2C1->CR2|=(0x6<<16);//Set N Bytes to one byte
     I2C_Start();
-    for(size_t i = 0; i < sizeRead; i++){
+//    for(size_t i = (sizeRead-1); i > 0; i--){
+//        bpmArr[i] = I2C_ReadByte();
+//    }
+//    bpmArr[0] = I2C_ReadByte();
+    for(size_t i = 0; i <sizeRead; i++){
         bpmArr[i] = I2C_ReadByte();
     }
     I2C_Stop();
@@ -776,14 +934,14 @@ void readBpm(void){
         numSamplesOutFifo();
         readFillArray(bpmRetArr);
         // Heart Rate formatting
-        uint16_t heartRate = (uint16_t)(bpmRetArr[0] << 8);
+        uint16_t heartRate = (uint16_t)bpmRetArr[0] << 8;
         heartRate |= (bpmRetArr[1]);
         heartRate /= 10;
 
         // Confidence formatting
         uint8_t confidence = bpmRetArr[2];
         //Blood oxygen level formatting
-        uint16_t oxygen = (uint16_t)(bpmRetArr[3] << 8);
+        uint16_t oxygen = (uint16_t)bpmRetArr[3] << 8;
         oxygen |= bpmRetArr[4];
         oxygen /= 10;
         //"Machine State" - has a finger been detected?
@@ -793,6 +951,13 @@ void readBpm(void){
         // Use sprintf to convert the integer to ASCII
         sprintf(ascii_string, "%d", heartRate);
         USART5_SendString(ascii_string);
+//        USART5_SendString(" Confidence: ");
+//        sprintf(ascii_string, "%d", confidence);
+//        USART5_SendString(ascii_string);
+        USART5_SendString(" Status: ");
+        sprintf(ascii_string, "%d", status);
+        USART5_SendString(ascii_string);
+
         Delay_MiliSecond(250);
    // }
 }
@@ -926,6 +1091,9 @@ float getBAC(void){
 }
 
 void readBAC(){
+    if(!(GPIOA->ODR& ~(0xFFF7))){
+        GPIOA->BSRR|=(0x1<<4);
+        GPIOA->BSRR|=(0x1<<3);}
 
     uint16_t pBAC=getBAC();
 
@@ -944,20 +1112,23 @@ void setMFIOInt(void){
     RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
 
     GPIOB->MODER &= ~GPIO_MODER_MODER9;  // Clear the MODER bits for PA0
+
     // No need to set anything; it's already in input mode by default
-    GPIOB->PUPDR&= ~(0x3<<18);
+    GPIOB->PUPDR&= ~(0x3<<18); //pull up
+    GPIOB->PUPDR|=(0x1<<19); //pull up
+
 
     // Enable the SYSCFG peripheral clock
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
 
     // Connect EXTI9 line to PB9 pin
-    SYSCFG->EXTICR[2] &= ~(SYSCFG_EXTICR3_EXTI9);
+    SYSCFG->EXTICR[2] |=SYSCFG_EXTICR3_EXTI9_PB;//(0x1<<4);
 
     //Configure PB9 to trigger an interrupt on the falling edge (button press)
-   // EXTI->FTSR |= EXTI_FTSR_TR0; // Trigger on falling edge
-    EXTI->RTSR|=EXTI_RTSR_TR9;
-    EXTI->FTSR &= ~(EXTI_FTSR_TR9);       // Trigger on falling edge (HIGH to LOW)
-   // EXTI->RTSR &= ~(EXTI_RTSR_TR9);    // Disable rising edge trigger
+    EXTI->FTSR |= EXTI_FTSR_TR9; // Trigger on falling edge
+    //EXTI->RTSR|=EXTI_RTSR_TR9;
+    //EXTI->FTSR &= ~(EXTI_FTSR_TR9);       // Trigger on falling edge (HIGH to LOW)
+    EXTI->RTSR &= ~(EXTI_RTSR_TR9);    // Disable rising edge trigger
     EXTI->IMR |= EXTI_IMR_MR9;   // Enable EXTI9 (PB9)
 
 
@@ -969,7 +1140,44 @@ void EXTI4_15_IRQHandler(void){
 
     USART5_SendString("Heart Touch\n");
     Delay_MiliSecond(1000);
+    EXTI->PR |= EXTI_PR_PR9;
 
+}
+
+
+void setup_tim7() { //used for 3 minute timer
+
+    RCC->APB1ENR|=0x20;
+    // Calculate the prescaler and auto-reload value for a 30-minute timer
+    // SystemCoreClock is the current system clock frequency (in Hz)
+    // Assuming SystemCoreClock is 8 MHz
+    uint32_t prescaler = (SystemCoreClock / 1000) - 1;  // 1 kHz frequency
+    uint32_t timer_period_seconds = 2 * 60;  // 30 minutes in seconds
+    uint32_t auto_reload = (timer_period_seconds * 1000) - 1;
+    ///May be wrong below
+    TIM7->PSC=65534;  //not sure this right
+
+//    TIM7->ARR=10000;
+    TIM7->ARR=65534;
+    TIM7->CNT=0;
+
+
+    TIM7->DIER|=TIM_DIER_UIE;
+
+    NVIC->ISER[0]|=(0x1<<(TIM7_IRQn));//
+
+    TIM7->CR1|=TIM_CR1_CEN;
+}
+
+int timerCount=0;
+int timerSet=20; //each set is 90 seconds
+void TIM7_IRQHandler(){
+    TIM7->SR=0x00000000;
+    timerCount++;
+    if(timerCount==timerSet){
+        USART5_SendString("Timer ON");
+        timerCount=0;
+    }
 }
 
 int main(void)
@@ -991,18 +1199,30 @@ int main(void)
     setup_tim3();
     //initBlue();
     setup_adc();
-    setMFIOInt();
+    //setMFIOInt();
 //
 //    readBpm();
-//    uint16_t pBAC=getBAC();
-
-
+    //uint16_t pBAC=getBAC();
+    //GPIOA->MODER&= ~(0x3<<8);
+   // GPIOA->MODER |= (0x1<<8);  // Clear the MODER bits for PA0
+   // GPIOA->PUPDR&= ~(0x3<<8);
+   // GPIOA->PUPDR|= (0x1<<8);
+    //GPIOA->BSRR|=(0x1<<4);
+//    GPIOA->MODER&= ~(0x3<<6);
+//    GPIOA->MODER |= (0x1<<6);  // Clear the MODER bits for PA0
+//    GPIOA->PUPDR&= ~(0x3<<6);
+//    GPIOA->PUPDR|= (0x1<<6);
+//    GPIOA->BSRR|=(0x1<<3);
+    setup_tim7();
+    USART5_SendString("Start: ");
     while(1){
 
 
-//        readBpm();
-//        readBAC();
-//        readADC();
+        readBpm();
+        readBAC();
+        readADC();
+        Delay_MiliSecond(100);
+
 //not sure need this even since everything is interrupts
 //     pBAC=getBAC();
 //
