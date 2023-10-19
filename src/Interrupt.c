@@ -78,9 +78,17 @@ void EXTI0_1_IRQHandler(void) {
 
 void EXTI4_15_IRQHandler(void){
 
-    USART5_SendString("Heart Touch\n");
-    TIM2_delayMiliSecond(1000);
-    EXTI->PR |= EXTI_PR_PR9;
+    if(EXTI->PR & EXTI_PR_PR9){
+        USART5_SendString("Heart Touch\n");
+        EXTI->PR |= EXTI_PR_PR9;
+    }
+    else if(EXTI->PR & EXTI_PR_PR13)
+    {
+        USART5_SendString("Bat Button\n");
+        ADC_read();
+        EXTI->PR |= EXTI_PR_PR13;
+    }
+    EXTI->PR |= EXTI_PR_PR13;
 
 }
 
@@ -103,6 +111,26 @@ void PA0_interuptSetup(void){
     NVIC->ISER[0]|=(0x1<<(EXTI0_1_IRQn));
 }
 
+void PC13_interuptSetup(void){
+    RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
+
+    GPIOC->MODER &= ~(0x3<<26);  // Clear the MODER bits for PC13
+    // No need to set anything; it's already in input mode by default
+    GPIOC->PUPDR|= (0x1<<27);
+
+    // Configure PC13 to trigger an interrupt on the falling edge (button press)
+    SYSCFG->EXTICR[3] &= ~SYSCFG_EXTICR4_EXTI13;
+    SYSCFG->EXTICR[3] |= (0x1<<5);
+
+   // EXTI->FTSR |= EXTI_FTSR_TR0; // Trigger on falling edge
+    EXTI->RTSR|=EXTI_RTSR_TR13;
+    EXTI->IMR |= EXTI_IMR_MR13;   // Enable EXTI13 (PC0)
+
+
+    // Enable EXTI0 interrupt in NVIC
+    NVIC->ISER[0]|=(0x1<<(EXTI4_15_IRQn));
+}
 
 
 

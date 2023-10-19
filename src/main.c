@@ -30,16 +30,19 @@ int main(void)
     //set up GPIO for power to BT
 
     //set up usart to communicate with HM-19
-    init_tim2();
-    init_usart5();
-    init_I2C1();
-    PA0_interuptSetup();
+    init_tim2(); //timer two used for delays
+    init_usart5(); //usart used for bluetooth
+    init_I2C1(); //I2C to communiciate with heart rate and ethanol
+    PA0_interuptSetup(); //drink counter interrupt
+    PC13_interuptSetup(); //battery led button
+    //need a PC13 Interrupt
+    init_HR(); //start heart rate monitor
+    HR_readMode(); //read mode of heart rate monitor
+    init_tim3(); //timer 3 used for PWM
+    //init_HM19(); //program bluetooth module
+    init_ADC(); //start ADC
+    init_tim7();//timer used for 30 minute take breathalyer timer(maybe set when drink counted)?
 
-    init_HR();
-    HR_readMode();
-    init_tim3();
-    //init_HM19();
-    init_ADC();
     //HR_setMFIOInt();
 //
 //    HR_readBPM();
@@ -54,14 +57,13 @@ int main(void)
 //    GPIOA->PUPDR&= ~(0x3<<6);
 //    GPIOA->PUPDR|= (0x1<<6);
 //    GPIOA->BSRR|=(0x1<<3);
-    init_tim7();
     USART5_SendString("Start: ");
     while(1){
 
 
         HR_readBPM();
         BAC_read();
-        ADC_read();
+        //ADC_read();
         TIM2_delayMiliSecond(100);
 
 //not sure need this even since everything is interrupts
