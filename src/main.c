@@ -1,3 +1,5 @@
+
+
 /**
   ******************************************************************************
   * @file    main.c
@@ -42,6 +44,8 @@ int main(void)
     //init_HM19(); //program bluetooth module
     init_ADC(); //start ADC
     init_tim7();//timer used for 30 minute take breathalyer timer(maybe set when drink counted)?
+    init_tim16();
+
 
     //HR_setMFIOInt();
 //
@@ -79,3 +83,4 @@ int main(void)
     }
 
 }
+

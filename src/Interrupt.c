@@ -92,6 +92,7 @@ void EXTI4_15_IRQHandler(void){
 
 }
 
+//drink count interrupt
 void PA0_interuptSetup(void){
     RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
 
@@ -111,6 +112,7 @@ void PA0_interuptSetup(void){
     NVIC->ISER[0]|=(0x1<<(EXTI0_1_IRQn));
 }
 
+//battery display interrupt
 void PC13_interuptSetup(void){
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
@@ -132,5 +134,28 @@ void PC13_interuptSetup(void){
     NVIC->ISER[0]|=(0x1<<(EXTI4_15_IRQn));
 }
 
+int timerCount=0;
+int timerSet=20; //each set is 90 seconds
+void TIM7_IRQHandler(){
+    TIM7->SR=0x00000000;
+    timerCount++;
+    if(timerCount==timerSet){
+        USART5_SendString("Timer ON");
+        timerCount=0;
+    }
+}
 
+void TIM14_IRQHandler(){
+    TIM14->SR=0x00000000;
+    USART5_SendString("Timer 14");
+}
 
+void TIM15_IRQHandler(){
+    TIM15->SR=0x00000000;
+    USART5_SendString("Timer 15");
+}
+
+void TIM16_IRQHandler(){
+    TIM16->SR=0x00000000;
+    USART5_SendString("Timer 16");
+}

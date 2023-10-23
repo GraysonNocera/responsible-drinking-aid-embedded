@@ -1,9 +1,17 @@
+
 #include "Timers.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 
+void init_tim2(void){
+    // Initialize the timer
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;   // Enable TIM2 clock
+    TIM2->PSC = 47999;                      // Set prescaler to get 1ms timebase
+    TIM2->ARR = 999;                        // Auto-reload value to get 3s (3000ms)
+    TIM2->CR1 |= TIM_CR1_ARPE;             // Enable auto-reload preload
+}
 
 void init_tim3(void) {
     // TODO: Enable GPIO C
@@ -57,13 +65,60 @@ void init_tim3(void) {
 
 }
 
+void init_tim7() { //used for 3 minute timer
 
-void init_tim2(void){
-    // Initialize the timer
-    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;   // Enable TIM2 clock
-    TIM2->PSC = 47999;                      // Set prescaler to get 1ms timebase
-    TIM2->ARR = 999;                        // Auto-reload value to get 3s (3000ms)
-    TIM2->CR1 |= TIM_CR1_ARPE;             // Enable auto-reload preload
+    RCC->APB1ENR|=0x20;
+    // Calculate the prescaler and auto-reload value for a 30-minute timer
+    // SystemCoreClock is the current system clock frequency (in Hz)
+    // Assuming SystemCoreClock is 8 MHz
+    uint32_t prescaler = (SystemCoreClock / 1000) - 1;  // 1 kHz frequency
+    uint32_t timer_period_seconds = 2 * 60;  // 30 minutes in seconds
+    uint32_t auto_reload = (timer_period_seconds * 1000) - 1;
+    ///May be wrong below
+    TIM7->PSC=65534;  //not sure this right
+
+//    TIM7->ARR=10000;
+    TIM7->ARR=65534;
+    TIM7->CNT=0;
+
+
+    TIM7->DIER|=TIM_DIER_UIE;
+
+    NVIC->ISER[0]|=(0x1<<(TIM7_IRQn));//
+
+    TIM7->CR1|=TIM_CR1_CEN;
+}
+
+void init_tim14() {
+
+    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+    TIM14->DIER|=TIM_DIER_UIE;
+    TIM14->PSC = 47999;
+    TIM14->ARR = 999;
+    TIM14->CR1 |= TIM_CR1_ARPE;
+    NVIC->ISER[0]|=(0x1<<(TIM14_IRQn));//
+    TIM14->CR1|=TIM_CR1_CEN;
+}
+
+void init_tim15() {
+    RCC->APB2ENR |= RCC_APB2ENR_TIM15EN;
+    TIM15->DIER|=TIM_DIER_UIE;
+    TIM15->PSC = 47999;
+    TIM15->ARR = 999;
+    TIM15->CR1 |= TIM_CR1_ARPE;
+    NVIC->ISER[0]|=(0x1<<(TIM15_IRQn));
+    TIM15->CR1|=TIM_CR1_CEN;
+}
+
+void init_tim16() {
+
+    RCC->APB2ENR |= RCC_APB2ENR_TIM16EN;
+    TIM16->DIER|=TIM_DIER_UIE;
+    TIM16->PSC = 47999;
+    TIM16->ARR = 999;
+    TIM16->CR1 |= TIM_CR1_ARPE;
+    NVIC->ISER[0]|=(0x1<<(TIM16_IRQn));//
+    TIM16->CR1|=TIM_CR1_CEN;
 }
 
 void TIM2_delayOneSecond(void) {
@@ -91,39 +146,4 @@ void TIM2_delayMiliSecond(int ms) {
     TIM2->CR1 &= ~TIM_CR1_CEN;      // Stop the timer
     TIM2->ARR = 999;                        // Auto-reload value to get 3s (3000ms)
 
-}
-
-void init_tim7() { //used for 3 minute timer
-
-    RCC->APB1ENR|=0x20;
-    // Calculate the prescaler and auto-reload value for a 30-minute timer
-    // SystemCoreClock is the current system clock frequency (in Hz)
-    // Assuming SystemCoreClock is 8 MHz
-    uint32_t prescaler = (SystemCoreClock / 1000) - 1;  // 1 kHz frequency
-    uint32_t timer_period_seconds = 2 * 60;  // 30 minutes in seconds
-    uint32_t auto_reload = (timer_period_seconds * 1000) - 1;
-    ///May be wrong below
-    TIM7->PSC=65534;  //not sure this right
-
-//    TIM7->ARR=10000;
-    TIM7->ARR=65534;
-    TIM7->CNT=0;
-
-
-    TIM7->DIER|=TIM_DIER_UIE;
-
-    NVIC->ISER[0]|=(0x1<<(TIM7_IRQn));//
-
-    TIM7->CR1|=TIM_CR1_CEN;
-}
-
-int timerCount=0;
-int timerSet=20; //each set is 90 seconds
-void TIM7_IRQHandler(){
-    TIM7->SR=0x00000000;
-    timerCount++;
-    if(timerCount==timerSet){
-        USART5_SendString("Timer ON");
-        timerCount=0;
-    }
 }

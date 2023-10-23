@@ -4,6 +4,9 @@
 #include <string.h>
 #include "USART.h"
 
+void init_tim14(void);
+void init_tim15(void);
+void init_tim16(void);
 void init_tim3(void);
 void init_tim7(void);
 void init_tim2(void);
