@@ -53,7 +53,7 @@ uint16_t BAC_getADCData(void){
           100       |    18
           500       |    274
  */
-static float BAC_ethanolInCo(uint16_t co)
+float BAC_ethanolInCo(uint16_t co)
 {
     float etanol;
 
@@ -80,6 +80,44 @@ static float BAC_ethanolInCo(uint16_t co)
     return etanol;
 }
 
+/*  BAC  Percent PPM
+ *  0.01   0.1   26
+ *  0.05   0.5   131
+ *  0.08   0.8   209
+ *  0.2    2     522
+ *  0.3    3     783
+ *  */
+float BAC_ppmEthanolToBAC(uint16_t ppm){
+    float BAC=0.0;
+
+    if (ppm == 0)
+    {
+        BAC = 0;
+    }
+    else if (ppm <= 26)
+    {
+        BAC = ppm* (float)(.1/26.0);
+    }
+    else if (ppm > 26 && ppm <= 131)
+    {
+        BAC = ppm* (float)(.5/131.0);
+    }
+    else if (ppm > 131 && ppm <= 209.0)
+    {
+        BAC = ppm* (float)(.8/209.0);
+    }
+    else if (ppm > 209 && ppm <= 522)
+    {
+        BAC = ppm* (float)(2.0/522.0);
+    }
+    else if (ppm > 522 && ppm <= 783)
+    {
+        BAC = ppm* (float)(3.0/ 783.0);
+    }
+    return BAC;
+
+}
+
 /* Convert ppm to mg/L
  *
  * Table:  mg/l | air ppm
@@ -88,7 +126,7 @@ static float BAC_ethanolInCo(uint16_t co)
  *         0.18 | 100
  *         0.09 | 50
  */
-static float BAC_ppmTomgl(uint16_t ppm)
+float BAC_ppmTomgl(uint16_t ppm)
 {
     float mgL;
 
@@ -99,29 +137,34 @@ static float BAC_ppmTomgl(uint16_t ppm)
 float BAC_getData(void){
 
     float Alcohol_mgL;
+    float BAC;
     uint16_t Ethanol_ppm;
     uint16_t readData;
 
     readData = BAC_getADCData();
     Ethanol_ppm = BAC_ethanolInCo(readData);
     Alcohol_mgL = BAC_ppmTomgl(Ethanol_ppm);
+    // 1000mg/L = .1% BAC
 
+    //return 1000:.1%, 8000:.8%, 10,000:1%, 100:.001
+    BAC=BAC_ppmEthanolToBAC(Ethanol_ppm);
     return Alcohol_mgL*1000;
 }
 
 void BAC_read(){
-    if(!(GPIOA->ODR& ~(0xFFF7))){
-        GPIOA->BSRR|=(0x1<<4);
-        GPIOA->BSRR|=(0x1<<3);}
+//    if(!(GPIOA->ODR& ~(0xFFF7))){
+//        GPIOA->BSRR|=(0x1<<4);
+//        GPIOA->BSRR|=(0x1<<3);}
+    if(((GPIOA->ODR)&~(0xFFF7))){
+        uint16_t pBAC=BAC_getData();
 
-    uint16_t pBAC=BAC_getData();
-
-    char ascii_string[20]; // Create a buffer to store the ASCII representation
-    // Use sprintf to convert the integer to ASCII
-    sprintf(ascii_string, "%d", pBAC);
-    USART5_SendString("BAC: ");
-    USART5_SendString(ascii_string);
-//    USART5_SendChar('\n');
-//    USART5_SendChar('\r');
-    TIM2_delayMiliSecond(1000);
+        char ascii_string[20]; // Create a buffer to store the ASCII representation
+        // Use sprintf to convert the integer to ASCII
+        sprintf(ascii_string, "%d", pBAC);
+        USART5_SendString("BAC: ");
+        USART5_SendString(ascii_string);
+    //    USART5_SendChar('\n');
+    //    USART5_SendChar('\r');
+        TIM2_delayMiliSecond(1000);
+    }
 }

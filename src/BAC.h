@@ -7,7 +7,7 @@
 
 void BAC_readADC(uint8_t adcData[]);
 uint16_t BAC_getADCData(void);
-static float BAC_ethanolInCo(uint16_t co);
-static float BAC_ppmTomgl(uint16_t ppm);
+float BAC_ethanolInCo(uint16_t co);
+float BAC_ppmTomgl(uint16_t ppm);
 float BAC_getData(void);
 void BAC_read(void);

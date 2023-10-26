@@ -1,4 +1,10 @@
 #include "Interrupt.h"
+#include "BAC.h"
+
+int timerCount=0;
+int timerSet=20; //each set is 90 seconds
+int BACReadtimerCount=0;
+int BACReadtimerSet=20; //each set is 1 second
 
 void I2C1_IRQHandler(void) {
     // Check error flags
@@ -46,32 +52,25 @@ void USART3_4_5_6_7_8_IRQHandler(void) {
 void EXTI0_1_IRQHandler(void) {
     // Check if EXTI0 (PA0) triggered the interrupt
     if ((EXTI->PR & EXTI_PR_PR0) != 0) {
-        //USART5_SendString("btton");
-        USART5_SendString("Drink Consumed");
-        //TIM2_delayOneSecond();
-
-//        USART5_SendString("AT+RADD?");
-//        TIM2_delayOneSecond();
-//        USART5_SendString("AT+CONNL");
-//        TIM2_delayOneSecond();
-        // Clear the EXTI0 (PA0) pending interrupt
         EXTI->PR |= EXTI_PR_PR0;
+
+        if (GPIOA->IDR & GPIO_IDR_0) {
+            TIM14->CR1|=TIM_CR1_CEN;
+        } else {
+            if((TIM14->CNT)>=0x1388){
+                USART5_SendString("Bat Button\n");
+                ADC_read();
+            }
+            else if((TIM14->CNT)>=0x7D0){
+                USART5_SendString("Clear Drinks");
+            }
+            else{
+                USART5_SendString("Subtract Drink");
+            }
+            TIM14->CR1&=~(TIM_CR1_CEN);
+            TIM14->CNT=0;
+        }
     }
-    PWM_update();
-    GPIOA->MODER&= ~(0x3<<8);
-    GPIOA->MODER |= (0x1<<8);  // Clear the MODER bits for PA0
-    GPIOA->PUPDR&= ~(0x3<<8);
-    GPIOA->PUPDR|= (0x1<<9);
-    if(GPIOA->ODR& ~(0xFFF7)){
-       // GPIOA->BSRR|=(0x1<<20);
-        GPIOA->BSRR|=(0x1<<19);}
-    else{
-       // GPIOA->BSRR|=(0x1<<4);
-        GPIOA->BSRR|=(0x1<<3);;
-    }
-//    GPIOA->BSRR|=(0x1<<4);
-//    GPIOA->BSRR|=(0x1<<20);
-//    GPIOA->BSRR|=(0x1<<4);
 
 }
 
@@ -84,9 +83,30 @@ void EXTI4_15_IRQHandler(void){
     }
     else if(EXTI->PR & EXTI_PR_PR13)
     {
-        USART5_SendString("Bat Button\n");
-        ADC_read();
+
         EXTI->PR |= EXTI_PR_PR13;
+        if (GPIOC->IDR & GPIO_IDR_13) {
+            TIM15->CR1|=TIM_CR1_CEN;
+        } else {
+            if((TIM15->CNT)>=0x1388){
+                //reset global timer for turning on ethanol sensor
+                timerCount=0;
+                //need to turn on sensor
+                GPIOA->BSRR|=(0x1<<3);
+
+                //turn on ~1 second timer interrupt to read ADC value
+                TIM6->CR1|=TIM_CR1_CEN;
+                USART5_SendString("Sensor on 20s");
+                //count number of reads
+                //on ~20th read, reset read count, disable interrupt, turn off ethanol sensor
+
+            }
+            else{
+                USART5_SendString("Drink Consumed");
+            }
+            TIM15->CR1&=~(TIM_CR1_CEN);
+            TIM15->CNT=0;
+        }
     }
     EXTI->PR |= EXTI_PR_PR13;
 
@@ -105,6 +125,8 @@ void PA0_interuptSetup(void){
 
    // EXTI->FTSR |= EXTI_FTSR_TR0; // Trigger on falling edge
     EXTI->RTSR|=EXTI_RTSR_TR0;
+    EXTI->FTSR|=EXTI_FTSR_TR0; //set for falling edge also.
+
     EXTI->IMR |= EXTI_IMR_MR0;   // Enable EXTI0 (PA0)
 
 
@@ -116,6 +138,10 @@ void PA0_interuptSetup(void){
 void PC13_interuptSetup(void){
     RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
     RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
+    GPIOA->MODER&= ~(0x3<<6);
+    GPIOA->MODER |= (0x1<<6);  // Clear the MODER bits for PA0
+    GPIOA->PUPDR&= ~(0x3<<6);
+    GPIOA->PUPDR|= (0x1<<7);
 
     GPIOC->MODER &= ~(0x3<<26);  // Clear the MODER bits for PC13
     // No need to set anything; it's already in input mode by default
@@ -125,8 +151,8 @@ void PC13_interuptSetup(void){
     SYSCFG->EXTICR[3] &= ~SYSCFG_EXTICR4_EXTI13;
     SYSCFG->EXTICR[3] |= (0x1<<5);
 
-   // EXTI->FTSR |= EXTI_FTSR_TR0; // Trigger on falling edge
     EXTI->RTSR|=EXTI_RTSR_TR13;
+    EXTI->FTSR|=EXTI_FTSR_TR13; //set for falling edge also.
     EXTI->IMR |= EXTI_IMR_MR13;   // Enable EXTI13 (PC0)
 
 
@@ -134,8 +160,7 @@ void PC13_interuptSetup(void){
     NVIC->ISER[0]|=(0x1<<(EXTI4_15_IRQn));
 }
 
-int timerCount=0;
-int timerSet=20; //each set is 90 seconds
+
 void TIM7_IRQHandler(){
     TIM7->SR=0x00000000;
     timerCount++;
@@ -143,6 +168,26 @@ void TIM7_IRQHandler(){
         USART5_SendString("Timer ON");
         timerCount=0;
     }
+}
+
+
+void TIM6_DAC_IRQHandler(){
+    TIM6->SR=0x00000000;
+    BACReadtimerCount++;
+    BAC_read();
+    //on ~20th read, reset read count, disable interrupt, turn off ethanol sensor
+    if(BACReadtimerCount==BACReadtimerSet){
+        GPIOA->BSRR|=(0x1<<19);
+        USART5_SendString("Sensor OFF");
+        BACReadtimerCount=0;
+        TIM6->CR1&=~(TIM_CR1_CEN);
+    }
+}
+
+
+void TIM3_IRQHandler(){
+    TIM3->SR=0x00000000;
+    USART5_SendString("Timer 3");
 }
 
 void TIM14_IRQHandler(){

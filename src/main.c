@@ -44,7 +44,9 @@ int main(void)
     //init_HM19(); //program bluetooth module
     init_ADC(); //start ADC
     init_tim7();//timer used for 30 minute take breathalyer timer(maybe set when drink counted)?
-    init_tim16();
+    init_tim14();
+    init_tim15();
+    init_tim6();
 
 
     //HR_setMFIOInt();
@@ -61,26 +63,26 @@ int main(void)
 //    GPIOA->PUPDR&= ~(0x3<<6);
 //    GPIOA->PUPDR|= (0x1<<6);
 //    GPIOA->BSRR|=(0x1<<3);
-    USART5_SendString("Start: ");
-    while(1){
-
-
-        HR_readBPM();
-        BAC_read();
-        //ADC_read();
-        TIM2_delayMiliSecond(100);
-
-//not sure need this even since everything is interrupts
-//     pBAC=BAC_getData();
+//    USART5_SendString("Start: ");
+//    while(1){
 //
-//     char ascii_string[20]; // Create a buffer to store the ASCII representation
-//     // Use sprintf to convert the integer to ASCII
-//     sprintf(ascii_string, "%d", pBAC);
-//     USART5_SendString(ascii_string);
-//     USART5_SendChar('\n');
-//     USART5_SendChar('\r');
-//     TIM2_delayMiliSecond(1000);
-    }
+////
+////        HR_readBPM();
+//        BAC_read();
+////        //ADC_read();
+//        TIM2_delayMiliSecond(100);
+//
+////not sure need this even since everything is interrupts
+////     pBAC=BAC_getData();
+////
+////     char ascii_string[20]; // Create a buffer to store the ASCII representation
+////     // Use sprintf to convert the integer to ASCII
+////     sprintf(ascii_string, "%d", pBAC);
+////     USART5_SendString(ascii_string);
+////     USART5_SendChar('\n');
+////     USART5_SendChar('\r');
+////     TIM2_delayMiliSecond(1000);
+//    }
 
 }
 

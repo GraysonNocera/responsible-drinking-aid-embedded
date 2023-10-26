@@ -10,5 +10,7 @@ void init_tim16(void);
 void init_tim3(void);
 void init_tim7(void);
 void init_tim2(void);
+void init_tim3(void);
+void init_tim6(void);
 void TIM2_delayOneSecond(void);
 void TIM2_delayMiliSecond(int ms);
