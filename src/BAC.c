@@ -163,8 +163,6 @@ void BAC_read(){
         sprintf(ascii_string, "%d", pBAC);
         USART5_SendString("BAC: ");
         USART5_SendString(ascii_string);
-    //    USART5_SendChar('\n');
-    //    USART5_SendChar('\r');
         TIM2_delayMiliSecond(1000);
     }
 }

@@ -66,6 +66,7 @@ void init_tim6(void){
 }
 
 //global timer to turn on sensor every ~30 mins
+//each time is 89.473 seconds, this times 20=1789.46s. 29min 49.46s
 void init_tim7() { //used for 30 minute timer
 
     RCC->APB1ENR|=0x20;
@@ -87,7 +88,10 @@ void init_tim7() { //used for 30 minute timer
 
     NVIC->ISER[0]|=(0x1<<(TIM7_IRQn));//
 
+    USART5_SendString("Drink Timer Start");
+
     TIM7->CR1|=TIM_CR1_CEN;
+
 }
 
 //timer used to detect button press length PA0

@@ -91,18 +91,20 @@ void EXTI4_15_IRQHandler(void){
             if((TIM15->CNT)>=0x1388){
                 //reset global timer for turning on ethanol sensor
                 timerCount=0;
+                TIM7->CNT=0; //added, need to test
                 //need to turn on sensor
                 GPIOA->BSRR|=(0x1<<3);
-
                 //turn on ~1 second timer interrupt to read ADC value
                 TIM6->CR1|=TIM_CR1_CEN;
-                USART5_SendString("Sensor on 20s");
+                USART5_SendString("Drink Timer Reset");
+
+                USART5_SendString("Ethanol Sensor On");
                 //count number of reads
                 //on ~20th read, reset read count, disable interrupt, turn off ethanol sensor
 
             }
             else{
-                USART5_SendString("Drink Consumed");
+                USART5_SendString("Add Drink");
             }
             TIM15->CR1&=~(TIM_CR1_CEN);
             TIM15->CNT=0;
@@ -178,7 +180,10 @@ void TIM6_DAC_IRQHandler(){
     //on ~20th read, reset read count, disable interrupt, turn off ethanol sensor
     if(BACReadtimerCount==BACReadtimerSet){
         GPIOA->BSRR|=(0x1<<19);
-        USART5_SendString("Sensor OFF");
+        USART5_SendString("Ethanol Sensor OFF");
+        USART5_SendString("Drink Timer Reset");
+        timerCount=0; //added, need to test
+        TIM7->CNT=0; //added, need to test
         BACReadtimerCount=0;
         TIM6->CR1&=~(TIM_CR1_CEN);
     }
