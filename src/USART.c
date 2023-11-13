@@ -32,12 +32,18 @@ void init_usart5() {
     USART5->CR2&=~(0x3<<12); //stop bit set to 1 reg=00
     USART5->CR1&=~(USART_CR1_OVER8); //oversample bit set to 16
     USART5->BRR=0x1388; //set baud rate, the clock speed divided by this num(9600)
+    //USART5->BRR=0x9C4; //set baud rate, the clock speed divided by this num(9600)
+    //USART5->BRR=0x4E2; //set baud rate, the clock speed divided by this num(9600)
+
 
     USART5->CR1|=USART_CR1_RE|USART_CR1_TE; //enable RE and TE
 
     USART5->CR1|=USART_CR1_UE; //turn on usart5 enable bit
+    USART5->CR1|=USART_CR1_RXNEIE;
 
     while((!(USART5->ISR& USART_ISR_REACK)) && (!(USART5->ISR& USART_ISR_TEACK)));
+
+    //NVIC->ISER[0]|=(0x1<<(USART3_8_IRQn));
 
 
     //wait until ISR RXE and TXE are set
@@ -62,60 +68,77 @@ void USART5_SendString(const char* str) {
 }
 
 int init_HM19(void){
-    USART5_SendString("AT");
+    //USART5_SendString("AT+START");
     //USART5_SendString("AT+RENEW");
-    //USART5_SendString("fhjsdhjkhfjewhfjkhewjkdhjewkhdjkshadkjhjdhsjkhnnnnnnnndjsadhfjkdshfewui    hsdjhew dewhjd edj wedhjwehd wedkj ewdj ewdhwejhdjew dewhd wehd jkewhd ewdhwe dhewj dhwejdhlakjhcuihcue cu cuih cuhecuihechdiuch dsuich uidsch uidhciusdahciuhewiuwe iweibewbdiewbdwebdbewdiubweduihew idh we chsd jchjsdjkcjdshchjds c hdchjdshcjhds c hjdsch whedh ewhdgewhdgh ew gdghewdgh gewhdg hwegh dhgewgh dgh ewdgh egwhdghewdgewghdghewgh dgewghdgh ewdghewgdweghdgh ewhdhg  gdhwegh d ghewghdweghdgh weghdgewdgwehdsdjwejdioewdjoiewo djddajf jewf ewfe foiewfioefijewfjiojioef fe jjwe jkewjf jew jkf jwe jfwe fwenfnewndndnwejkdewkhwlfhjefkjwe fhew fhuqewohfewhifweui fdwjkfhsdhfiuwhf eurgfeufbyeci bcuhebcyubcyreiucberucberucberybcyuer c jercued bcuy erbce cyer c ercbe cwecgedcjhsgd cdjh hejg fjhergf jehgwfhgdcb cyer cbuyecyuer uycbue bcuye bcuyer cbuyberucyb eurcb uycb ue cbue cbuye bcure cuyer cbu ercyub eruc ber cbuer cbuercbuyecbuyecbue cubj hdsjcd hcjb hcbreu bcuyer cbkjsedbchjs buyfr ekaufewi fyuewrufe fhbdsmhbcj hebe fuyerfuyer fvdjhfe erfguefer gffhrefhjsdhjkhfjewhfjkhewjkdhjewkhdjkshadkjhjdhsjkhdjsadhfjkdshfewui    hsdjhew dewhjd edj wedhjwehd wedkj ewdj ewdhwejhdjew dewhd wehd jkewhd ewdhwe dhewj dhwejdhlakjhcuihcue cu cuih cuhecuihechdiuch dsuich uidsch uidhciusdahciuhewiuwe iweibewbdiewbdwebdbewdiubweduihew idh we chsd jchjsdjkcjdshchjds c hdchjdshcjhds c hjdsch whedh ewhdgewhdgh ew gdghewdgh gewhdg hwegh dhgewgh dgh ewdgh egwhdghewdgewghdghewgh dgewghdgh ewdghewgdweghdgh ewhdhg  gdhwegh d ghewghdweghdgh weghdgewdgwehdsdjwejdioewdjoiewo djddajf jewf ewfe foiewfioefijewfjiojioef fe jjwe jkewjf jew jkf jwe jfwe fwenfnewndndnwejkdewkhwlfhjefkjwe fhew fhuqewohfewhifweui fdwjkfhsdhfiuwhf eurgfeufbyeci bcuhebcyubcyreiucberucberucberybcyuer c jercued bcuy erbce cyer c ercbe cwecgedcjhsgd cdjh hejg fjhergf jehgwfhgdcb cyer cbuyecyuer uycbue bcuye bcuyer cbuyberucyb eurcb uycb ue cbue cbuye bcure cuyer cbu ercyub eruc ber cbuer cbuercbuyecbuyecbue cubj hdsjcd hcjb hcbreu bcuyer cbkjsedbchjs buyfr ekaufewi fyuewrufe fhbdsmhbcj hebe fuyerfuyer fvdjhfe erfguefer gffhreghjg jyg hfhgfgh f ghfffdgffgdfg ddfg fg df");
+   // USART5_SendString("fhjsdhjkhfjewhfjkhewjkdhjewkhdjkshadkjhjdhsjkhnnnnnnnndjsadhfjkdshfewui    hsdjhew dewhjd edj wedhjwehd wedkj ewdj ewdhwejhdjew dewhd wehd jkewhd ewdhwe dhewj dhwejdhlakjhcuihcue cu cuih cuhecuihechdiuch dsuich uidsch uidhciusdahciuhewiuwe iweibewbdiewbdwebdbewdiubweduihew idh we chsd jchjsdjkcjdshchjds c hdchjdshcjhds c hjdsch whedh ewhdgewhdgh ew gdghewdgh gewhdg hwegh dhgewgh dgh ewdgh egwhdghewdgewghdghewgh dgewghdgh ewdghewgdweghdgh ewhdhg  gdhwegh d ghewghdweghdgh weghdgewdgwehdsdjwejdioewdjoiewo djddajf jewf ewfe foiewfioefijewfjiojioef fe jjwe jkewjf jew jkf jwe jfwe fwenfnewndndnwejkdewkhwlfhjefkjwe fhew fhuqewohfewhifweui fdwjkfhsdhfiuwhf eurgfeufbyeci bcuhebcyubcyreiucberucberucberybcyuer c jercued bcuy erbce cyer c ercbe cwecgedcjhsgd cdjh hejg fjhergf jehgwfhgdcb cyer cbuyecyuer uycbue bcuye bcuyer cbuyberucyb eurcb uycb ue cbue cbuye bcure cuyer cbu ercyub eruc ber cbuer cbuercbuyecbuyecbue cubj hdsjcd hcjb hcbreu bcuyer cbkjsedbchjs buyfr ekaufewi fyuewrufe fhbdsmhbcj hebe fuyerfuyer fvdjhfe erfguefer gffhrefhjsdhjkhfjewhfjkhewjkdhjewkhdjkshadkjhjdhsjkhdjsadhfjkdshfewui    hsdjhew dewhjd edj wedhjwehd wedkj ewdj ewdhwejhdjew dewhd wehd jkewhd ewdhwe dhewj dhwejdhlakjhcuihcue cu cuih cuhecuihechdiuch dsuich uidsch uidhciusdahciuhewiuwe iweibewbdiewbdwebdbewdiubweduihew idh we chsd jchjsdjkcjdshchjds c hdchjdshcjhds c hjdsch whedh ewhdgewhdgh ew gdghewdgh gewhdg hwegh dhgewgh dgh ewdgh egwhdghewdgewghdghewgh dgewghdgh ewdghewgdweghdgh ewhdhg  gdhwegh d ghewghdweghdgh weghdgewdgwehdsdjwejdioewdjoiewo djddajf jewf ewfe foiewfioefijewfjiojioef fe jjwe jkewjf jew jkf jwe jfwe fwenfnewndndnwejkdewkhwlfhjefkjwe fhew fhuqewohfewhifweui fdwjkfhsdhfiuwhf eurgfeufbyeci bcuhebcyubcyreiucberucberucberybcyuer c jercued bcuy erbce cyer c ercbe cwecgedcjhsgd cdjh hejg fjhergf jehgwfhgdcb cyer cbuyecyuer uycbue bcuye bcuyer cbuyberucyb eurcb uycb ue cbue cbuye bcure cuyer cbu ercyub eruc ber cbuer cbuercbuyecbuyecbue cubj hdsjcd hcjb hcbreu bcuyer cbkjsedbchjs buyfr ekaufewi fyuewrufe fhbdsmhbcj hebe fuyerfuyer fvdjhfe erfguefer gffhreghjg jyg hfhgfgh f ghfffdgffgdfg ddfg fg df");
 
-    TIM2_delayOneSecond();
+    //TIM2_delayOneSecond();
     TIM2_delayOneSecond();
     //get device name
-   // USART5_SendString("AT+RESET");
-    TIM2_delayOneSecond();
+    //USART5_SendString("AT+RESET");
+    //USART5_SendString("AT+START");
+
     //get device address
-    USART5_SendString("AT+ADDR?");
-    TIM2_delayOneSecond();
+    //USART5_SendString("AT+ADDR?");
     //set advertising type
-    USART5_SendString("AT+ADTY0");
-    TIM2_delayOneSecond();
+//    USART5_SendString("AT+ADTY0");
+//    TIM2_delayOneSecond();
     //get device mode
-    USART5_SendString("AT+MODE?");
+    //USART5_SendString("AT+MODE?");
+//    //set role as peripheral
+    //USART5_SendString("AT+ROLE0");
+//    //set so device starts working as soon as boot
+    //USART5_SendString("AT+IMME0");
     TIM2_delayOneSecond();
-    //set role as peripheral
-    USART5_SendString("AT+ROLE0");
-    TIM2_delayOneSecond();
-    //set so device starts working as soon as boot
-    USART5_SendString("AT+IMME0");
-    TIM2_delayOneSecond();
-
-    //Reset advertising beacon
-    USART5_SendString("AT+IBEA0");
-    TIM2_delayOneSecond();
-
-    //Turn on advertising beacon
-    USART5_SendString("AT+IBEA1");
-    TIM2_delayOneSecond();
-
-    //get last connected device address
-    USART5_SendString("AT+RADD?");
-    TIM2_delayOneSecond();
-////
-//    //unneeded when device in IMME0, if in IMME1 this command will tell module to start working.
-    USART5_SendString("AT+START");
-    TIM2_delayOneSecond();
-    USART5_SendString("AT+NAME?");
-    TIM2_delayOneSecond();
-
+//
+//    //Reset advertising beacon
+//    USART5_SendString("AT+IBEA0");
+//    TIM2_delayOneSecond();
+//
+//    //Turn on advertising beacon
+    //USART5_SendString("AT+IBEA1");
+    //TIM2_delayOneSecond();
+//
+//    //get last connected device address
+//    USART5_SendString("AT+RADD?");
+//    TIM2_delayOneSecond();
+//////
+////    //unneeded when device in IMME0, if in IMME1 this command will tell module to start working.
+//    USART5_SendString("AT+START");
+    //USART5_SendString("AT+NAME?");
+//    USART5_SendString("AT+RENEW");
+//    TIM2_delayOneSecond();
+//    USART5_SendString("AT+IBEA1");
+//    TIM2_delayOneSecond();
+//    USART5_SendString("AT+ROLE0");
+//    TIM2_delayOneSecond();
     USART5_SendString("AT+MODE1");
     TIM2_delayOneSecond();
     USART5_SendString("AT+PWRM1");
     TIM2_delayOneSecond();
-    USART5_SendString("AT+PARI?");
+    USART5_SendString("AT+PARI0");
     TIM2_delayOneSecond();
-    USART5_SendString("AT+POWE?");
+    USART5_SendString("AT+IMME0");
     TIM2_delayOneSecond();
-    USART5_SendString("AT+STOP?");
+    USART5_SendString("AT+ROLE0");
     TIM2_delayOneSecond();
-    USART5_SendString("AT+SAVE?");
+    USART5_SendString("AT+ADVI0");
+    TIM2_delayOneSecond();
+
+    USART5_SendString("AT+SHOW1");
+    TIM2_delayOneSecond();
+    USART5_SendString("AT+RELI1");
+    TIM2_delayOneSecond();
+    USART5_SendString("AT+IBEA1");
+    TIM2_delayOneSecond();
+
+//    USART5_SendString("AT+PARI?");
+//    TIM2_delayOneSecond();
+//    USART5_SendString("AT+POWE?");
+//    TIM2_delayOneSecond();
+//    USART5_SendString("AT+STOP?");
+//    TIM2_delayOneSecond();
+//    USART5_SendString("AT+SAVE?");
     TIM2_delayOneSecond();
 
 }

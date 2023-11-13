@@ -47,11 +47,11 @@ void init_tim3(void) {
     //Enable TIM3 counter
     TIM3->CR1|=TIM_CR1_CEN;
 
-    //Set CCR values
-    TIM3->CCR1=800;
-    TIM3->CCR2=400;
-    TIM3->CCR3=200;
-    TIM3->CCR4=100;
+//    //Set CCR values
+//    TIM3->CCR1=800;
+//    TIM3->CCR2=400;
+//    TIM3->CCR3=200;
+//    TIM3->CCR4=100;
 
 }
 
@@ -81,6 +81,7 @@ void init_tim7() { //used for 30 minute timer
 
 //    TIM7->ARR=10000;
     TIM7->ARR=65534;
+    TIM7->ARR=65534/60; //change back after demo
     TIM7->CNT=0;
 
 
@@ -88,7 +89,7 @@ void init_tim7() { //used for 30 minute timer
 
     NVIC->ISER[0]|=(0x1<<(TIM7_IRQn));//
 
-    USART5_SendString("Drink Timer Start");
+    //USART5_SendString("Drink Timer Start");
 
     TIM7->CR1|=TIM_CR1_CEN;
 
@@ -119,12 +120,19 @@ void init_tim15() {
 
 void init_tim16() {
     RCC->APB2ENR |= RCC_APB2ENR_TIM16EN;
-    TIM16->DIER|=TIM_DIER_UIE;
     TIM16->PSC = 47999;
-    TIM16->ARR = 65534;
+    TIM16->ARR = 999;
     TIM16->CR1 |= TIM_CR1_ARPE;
-    NVIC->ISER[0]|=(0x1<<(TIM16_IRQn));//
-    TIM16->CR1|=TIM_CR1_CEN;
+    //TIM16->CR1|=TIM_CR1_CEN;
+}
+
+void init_tim17() {
+    RCC->APB2ENR |= RCC_APB2ENR_TIM17EN;
+    TIM17->DIER|=TIM_DIER_UIE;
+    TIM17->PSC = 47999;
+    TIM17->ARR = 5000;
+    TIM17->CR1 |= TIM_CR1_ARPE;
+    NVIC->ISER[0]|=(0x1<<(TIM17_IRQn));//
 }
 
 //delay one second
@@ -144,8 +152,9 @@ void TIM2_delayMiliSecond(int ms) {
     TIM2->PSC = 47999;                      // Set prescaler to get 1ms timebase
     TIM2->ARR = ms-1;                        // Auto-reload value to get 3s (3000ms)
 
-    TIM2->CNT = 0;                  // Reset the timer counter
+//    TIM2->CNT = 0;                  // Reset the timer counter
     TIM2->CR1 |= TIM_CR1_CEN;       // Start the timer
+
     while (!(TIM2->SR & TIM_SR_UIF)) {
         // Wait for the update interrupt flag to be set
     }
@@ -153,5 +162,24 @@ void TIM2_delayMiliSecond(int ms) {
     TIM2->SR=0x00000000;
     TIM2->CR1 &= ~TIM_CR1_CEN;      // Stop the timer
     TIM2->ARR = 999;                        // Auto-reload value to get 3s (3000ms)
+    TIM2->CNT = 0;                  // Reset the timer counter
+
+}
+
+void TIM16_delayMiliSecond(int ms) {
+    TIM16->PSC = 47999;                      // Set prescaler to get 1ms timebase
+    TIM16->ARR = ms-1;                        // Auto-reload value to get 3s (3000ms)
+
+//    TIM16->CNT = 0;                  // Reset the timer counter
+    TIM16->CR1 |= TIM_CR1_CEN;       // Start the timer
+
+    while (!(TIM16->SR & TIM_SR_UIF)) {
+        // Wait for the update interrupt flag to be set
+    }
+    //TIM16->SR &= ~TIM_SR_UIF;        // Clear the update interrupt flag
+    TIM16->SR=0x00000000;
+    TIM16->CR1 &= ~TIM_CR1_CEN;      // Stop the timer
+    TIM16->ARR = 999;                        // Auto-reload value to get 3s (3000ms)
+    TIM16->CNT = 0;                  // Reset the timer counter
 
 }

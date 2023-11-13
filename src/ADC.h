@@ -13,3 +13,4 @@ void PWM_update(void);
 void ADC_initBatLEDs(void);
 void BAT_changeLEDs(int batLevel);
 int BAT_PercLookup(uint16_t batVal);
+void BAT_changeLEDs0();

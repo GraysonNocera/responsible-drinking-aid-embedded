@@ -57,31 +57,37 @@ void init_ADC(void) {
 
     //Must wait
 }
+void BAT_changeLEDs0(){
+    TIM3->CCR1=0;
+    TIM3->CCR2=0;
+    TIM3->CCR3=0;
+    TIM3->CCR4=0;
+}
 
 void BAT_changeLEDs(int batLevel){
     if(batLevel==1){
-        TIM3->CCR1=100;
+        TIM3->CCR1=400;
         TIM3->CCR2=0;
         TIM3->CCR3=0;
         TIM3->CCR4=0;
     }
     else if(batLevel==2){
-        TIM3->CCR1=100;
-        TIM3->CCR2=100;
+        TIM3->CCR1=400;
+        TIM3->CCR2=400;
         TIM3->CCR3=0;
         TIM3->CCR4=0;
     }
     else if(batLevel==3){
-        TIM3->CCR1=100;
-        TIM3->CCR2=100;
-        TIM3->CCR3=100;
+        TIM3->CCR1=400;
+        TIM3->CCR2=400;
+        TIM3->CCR3=400;
         TIM3->CCR4=0;
     }
     else{
-        TIM3->CCR1=100;
-        TIM3->CCR2=100;
-        TIM3->CCR3=100;
-        TIM3->CCR4=100;
+        TIM3->CCR1=400;
+        TIM3->CCR2=400;
+        TIM3->CCR3=400;
+        TIM3->CCR4=400;
     }
 
 }
@@ -95,7 +101,7 @@ void BAT_changeLEDs(int batLevel){
 //3.40         |  10%
 //3.20         |   0%
 
-int BAT_PercLookup(uint16_t batVal){
+int BAT_PercLookupOG(uint16_t batVal){
     int percRange;
 
     if(batVal>=0 && batVal<25){
@@ -113,13 +119,31 @@ int BAT_PercLookup(uint16_t batVal){
     return percRange;
 }
 
+int BAT_PercLookup(uint16_t batVal){
+    int percRange;
+
+    if(batVal>=0 && 1328<25){
+        percRange=1;
+    }
+    else if(batVal>=1328 && batVal<1500){
+        percRange=2;
+    }
+    else if(batVal>=1500 && batVal<1682){
+        percRange=3;
+    }
+    else{
+        percRange=4;
+    }
+    return percRange;
+}
+
 void ADC_read(){
 
     ADC1->CR&=~ADC_CR_ADSTART; //start adc
     ADC1->CR|=ADC_CR_ADSTART; //
     while(!(ADC1->ISR & ADC_ISR_EOC)); //wait for EOC
 
-    uint16_t batVal = ADC1->DR*100/4095;
+    uint16_t batVal = ADC1->DR;//*100/4095;
 
     int percRange=BAT_PercLookup(batVal);
     char ascii_string[20]; // Create a buffer to store the ASCII representation

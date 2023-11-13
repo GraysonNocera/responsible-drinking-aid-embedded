@@ -6,7 +6,17 @@
 
 void BAC_readADC(uint8_t adcData[]){
     I2C1->CR2 &=~0xFF<<0; //slave address of ethanol sensor
-    I2C1->CR2 |=0x9A<<0; //slave address of ethanol sensor
+    //I2C1->CR2 |=0x9A<<0; //slave address of ethanol sensor
+    I2C1->CR2 |=0x48<<1; //slave address of ethanol sensor
+ //   I2C1->CR2 |=0x49<<1; //slave address of ethanol sensor
+//    I2C1->CR2 |=0x4A<<1; //slave address of ethanol sensor
+//    I2C1->CR2 |=0x4B<<1; //slave address of ethanol sensor
+//    I2C1->CR2 |=0x4C<<1; //slave address of ethanol sensor
+  //  I2C1->CR2 |=0x4D<<1; //slave address of ethanol sensor
+//  I2C1->CR2 |=0x4E<<1; //slave address of ethanol sensor
+ //   I2C1->CR2 |=0x4F<<1; //slave address of ethanol sensor
+
+
     I2C1->CR2 &= ~I2C_CR2_RD_WRN;
     I2C1->CR2&=~(0xFF<<16);//clear NBYTES
     I2C1->CR2|=(0x1<<16);//Set N Bytes to one byte

@@ -4,7 +4,8 @@
 int timerCount=0;
 int timerSet=20; //each set is 90 seconds
 int BACReadtimerCount=0;
-int BACReadtimerSet=20; //each set is 1 second
+int BACReadtimerSet=20+15; //each set is 1 second
+int drinks=0;
 
 void I2C1_IRQHandler(void) {
     // Check error flags
@@ -42,30 +43,39 @@ void I2C1_IRQHandler(void) {
 
 void USART3_4_5_6_7_8_IRQHandler(void) {
 
-    if (USART5->ISR & USART_ISR_RXNE) {
-        char receivedChar = USART5->RDR; // Read the received data
-        USART5_SendChar(receivedChar);
+    //if (USART5->ISR & USART_ISR_RXNE) {
+    char receivedChar = USART5->RDR; // Read the received data
         //handleInput(receivedChar);
-       }
+      // }
+    //USART1->ICR = USART_ICR_RXNECF;  // Clear RXNE flag
+
 }
 
 void EXTI0_1_IRQHandler(void) {
     // Check if EXTI0 (PA0) triggered the interrupt
     if ((EXTI->PR & EXTI_PR_PR0) != 0) {
         EXTI->PR |= EXTI_PR_PR0;
+        //ADC_read();
 
         if (GPIOA->IDR & GPIO_IDR_0) {
             TIM14->CR1|=TIM_CR1_CEN;
         } else {
             if((TIM14->CNT)>=0x1388){
-                USART5_SendString("Bat Button\n");
+                //USART5_SendString("Bat Button\n");
                 ADC_read();
+                TIM17->CR1|=TIM_CR1_CEN;
+                //BAT_changeLEDs0();
             }
             else if((TIM14->CNT)>=0x7D0){
                 USART5_SendString("Clear Drinks");
+                //BAT_changeLEDs0();
+                drinks=0;
+                TIM7_ChangeLen(40);
             }
             else{
                 USART5_SendString("Subtract Drink");
+                drinks--;
+                //BAT_changeLEDs0();
             }
             TIM14->CR1&=~(TIM_CR1_CEN);
             TIM14->CNT=0;
@@ -96,15 +106,22 @@ void EXTI4_15_IRQHandler(void){
                 GPIOA->BSRR|=(0x1<<3);
                 //turn on ~1 second timer interrupt to read ADC value
                 TIM6->CR1|=TIM_CR1_CEN;
-                USART5_SendString("Drink Timer Reset");
-
-                USART5_SendString("Ethanol Sensor On");
+                //USART5_SendString("Drink Timer Reset");
+                USART5_SendString("Ethanol Sensor ON");
+                //TIM16_delayMiliSecond(50);
                 //count number of reads
                 //on ~20th read, reset read count, disable interrupt, turn off ethanol sensor
 
             }
             else{
                 USART5_SendString("Add Drink");
+                //if more than 20 mins until next BAC take then set 20 min timer, else leave
+                drinks++;
+                if((timerSet-timerCount)>14){
+                    timerCount=0;
+                    TIM7_ChangeLen(14);
+                }
+
             }
             TIM15->CR1&=~(TIM_CR1_CEN);
             TIM15->CNT=0;
@@ -163,12 +180,24 @@ void PC13_interuptSetup(void){
 }
 
 
+void TIM7_ChangeLen(int len){
+    timerSet=len;
+}
+
 void TIM7_IRQHandler(){
     TIM7->SR=0x00000000;
     timerCount++;
     if(timerCount==timerSet){
-        USART5_SendString("Timer ON");
+        //USART5_SendString("Timer ON");
+        USART5_SendString("Ethanol Sensor ON");
+        //TIM16_delayMiliSecond(50);
+        TIM7->CR1&=~TIM_CR1_CEN;
         timerCount=0;
+        TIM7->CNT=0; //added, need to test
+        //need to turn on sensor
+        GPIOA->BSRR|=(0x1<<3);
+        //turn on ~1 second timer interrupt to read ADC value
+        TIM6->CR1|=TIM_CR1_CEN;
     }
 }
 
@@ -176,16 +205,35 @@ void TIM7_IRQHandler(){
 void TIM6_DAC_IRQHandler(){
     TIM6->SR=0x00000000;
     BACReadtimerCount++;
-    BAC_read();
-    //on ~20th read, reset read count, disable interrupt, turn off ethanol sensor
+    if(BACReadtimerCount<15 && BACReadtimerCount>1){
+        USART5_SendString("BAC: 0");
+        TIM2_delayMiliSecond(1000);
+    }
+    else if(BACReadtimerCount==BACReadtimerSet){
+        TIM2_delayMiliSecond(1000);
+        USART5_SendString("Ethanol Sensor OFF");
+    }
+    else{
+        BAC_read();
+    }
+    //on ~45th read, reset read count, disable interrupt, turn off ethanol sensor
     if(BACReadtimerCount==BACReadtimerSet){
         GPIOA->BSRR|=(0x1<<19);
-        USART5_SendString("Ethanol Sensor OFF");
-        USART5_SendString("Drink Timer Reset");
+        //TIM16_delayMiliSecond(50);
+        //USART5_SendString("Drink Timer Reset");
         timerCount=0; //added, need to test
         TIM7->CNT=0; //added, need to test
         BACReadtimerCount=0;
         TIM6->CR1&=~(TIM_CR1_CEN);
+        //if more than one drink taken, set 20 mins
+        if(drinks>1){
+            TIM7_ChangeLen(14);
+        }
+        else{
+            TIM7_ChangeLen(40);
+        }
+        drinks=0;
+        TIM7->CR1|=TIM_CR1_CEN;
     }
 }
 
@@ -208,4 +256,12 @@ void TIM15_IRQHandler(){
 void TIM16_IRQHandler(){
     TIM16->SR=0x00000000;
     USART5_SendString("Timer 16");
+}
+
+void TIM17_IRQHandler(){
+    TIM17->SR=0x00000000;
+    TIM17->CR1&=~(TIM_CR1_CEN);
+    TIM17->CNT=0;
+    BAT_changeLEDs0();
+    //USART5_SendString("Timer 17");
 }

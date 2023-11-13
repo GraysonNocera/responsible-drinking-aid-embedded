@@ -47,6 +47,7 @@ void I2C_Start(void) {
     //I2C1->CR2 &= ~I2C_CR2_RD_WRN; //clear read bit
     I2C1->CR2 |= I2C_CR2_START; //start transfer
     int count=0;
+    //TIM2_delayMiliSecond(5);
     while (!(I2C1->ISR & I2C_ISR_TXE)){};
     //while (!(I2C1->ISR & I2C_ISR_TXE) && (count<=4)){TIM2_delayMiliSecond(40); count++;}; // Wait for TXE (transmit data register empty)
 }
@@ -78,7 +79,7 @@ uint8_t I2C_ReadByte(void) {
     while (!(I2C1->ISR & I2C_ISR_RXNE)){};//&&(count<=4)){TIM2_delayMiliSecond(4); count++;};
     //while (!(I2C1->ISR & I2C_ISR_RXNE) && (count<=4)){TIM2_delayMiliSecond(40); count++;}; // Wait for TXE (transmit data register empty)
 
-    TIM2_delayMiliSecond(45);
+    TIM2_delayMiliSecond(2);
 
     // Read data from the data register
     uint8_t data = I2C1->RXDR;
