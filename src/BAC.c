@@ -97,9 +97,9 @@ float BAC_ethanolInCo(uint16_t co)
  *  0.2    2     522
  *  0.3    3     783
  *  */
-float BAC_ppmEthanolToBAC(uint16_t ppm){
+float BAC_ppmEthanolToBAC(uint16_t ppmin){
     float BAC=0.0;
-
+    float ppm= (float)ppmin;
     if (ppm == 0)
     {
         BAC = 0;
@@ -158,7 +158,8 @@ float BAC_getData(void){
 
     //return 1000:.1%, 8000:.8%, 10,000:1%, 100:.001
     BAC=BAC_ppmEthanolToBAC(Ethanol_ppm);
-    return Alcohol_mgL*1000;
+    return BAC*1000;
+    //return Alcohol_mgL*1000;
 }
 
 void BAC_read(){
@@ -166,11 +167,13 @@ void BAC_read(){
 //        GPIOA->BSRR|=(0x1<<4);
 //        GPIOA->BSRR|=(0x1<<3);}
     if(((GPIOA->ODR)&~(0xFFF7))){
-        uint16_t pBAC=BAC_getData();
+        int pBAC=BAC_getData();
 
         char ascii_string[20]; // Create a buffer to store the ASCII representation
         // Use sprintf to convert the integer to ASCII
+        //sprintf(ascii_string, "%d", pBAC);
         sprintf(ascii_string, "%d", pBAC);
+
         USART5_SendString("BAC: ");
         USART5_SendString(ascii_string);
         TIM2_delayMiliSecond(1000);

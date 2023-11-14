@@ -131,8 +131,10 @@ void init_tim17() {
     TIM17->DIER|=TIM_DIER_UIE;
     TIM17->PSC = 47999;
     TIM17->ARR = 5000;
+    TIM17->CNT=0;
     TIM17->CR1 |= TIM_CR1_ARPE;
     NVIC->ISER[0]|=(0x1<<(TIM17_IRQn));//
+    TIM17->CR1 |= TIM_CR1_CEN;
 }
 
 //delay one second

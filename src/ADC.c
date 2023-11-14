@@ -146,11 +146,11 @@ void ADC_read(){
     uint16_t batVal = ADC1->DR;//*100/4095;
 
     int percRange=BAT_PercLookup(batVal);
-    char ascii_string[20]; // Create a buffer to store the ASCII representation
+    //char ascii_string[20]; // Create a buffer to store the ASCII representation
     // Use sprintf to convert the integer to ASCII
-    sprintf(ascii_string, "%d", percRange);
-    USART5_SendString("Bat: ");
-    USART5_SendString(ascii_string);
+    //sprintf(ascii_string, "%d", percRange);
+    //USART5_SendString("Bat: ");
+    //USART5_SendString(ascii_string);
     BAT_changeLEDs(percRange);
 
 }
