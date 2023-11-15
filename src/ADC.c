@@ -153,4 +153,7 @@ void ADC_read(){
     //USART5_SendString(ascii_string);
     BAT_changeLEDs(percRange);
 
+    ADC1->CR |= ADC_CR_ADSTP;
+
+
 }
